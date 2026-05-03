@@ -1,0 +1,364 @@
+===== PAGE 1 =====
+Elektrotehnički fakultet u Beogradu
+Principi softverskog inženjerstva
+BeachBooker
+Projektni zadatak
+Verzija 1.0
+Tim: Tropski bar
+6. april 2026.
+
+===== PAGE 2 =====
+BeachBooker - tim Tropski Bar 1
+Istorija izmena
+Datum Verzija Kratak opis Autor
+Sadržaj
+1 Uvod 2
+1.1 Rezime . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 2
+2 Opis problema 2
+3 Kategorije korisnika 3
+3.1 Gost . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 3
+3.2 Registrovani korisnik . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 3
+3.3 Vlasnik beach bara . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 4
+3.4 Administrator . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 4
+4 Opis proizvoda 4
+4.1 Pregled arhitekture sistema . . . . . . . . . . . . . . . . . . . . . . . . . . 4
+4.2 Pregled karakteristika . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 5
+5 Funkcionalni zahtevi 5
+6 Pretpostavke i ograničenja 7
+7 Kvalitet 8
+8 Nefunkcionalni zahtevi 8
+9 Plan i prioriteti 9
+
+===== PAGE 3 =====
+BeachBooker - tim Tropski Bar 2
+1. Uvod
+1.1. Rezime
+BeachBookerje objedinjena platforma koja omogućava korisnicima da unapred re-
+zervišu tačno određenu ležaljku u okviru beach bara, putem interaktivne mape njegove
+plaže.
+Umesto neizvesnosti i improvizacije, korisnik dobija jasan pregled i potpunu kontrolu.
+Kao što na platformama poput AirBnB-a korisnik pretražuje i bira konkretan smeštaj,
+ovde pretražuje beach barove i za svaki od njih dobija interaktivnu mapu rasporeda ležalj-
+ki. Kroz vizuelni prikaz, moguće je tačno videti raspored i izabrati poziciju koja najviše
+odgovara, bilo da je bliže moru, u hladu ili u određenom delu plaže.
+Korisničko iskustvo je jednostavno i prirodno: korisnik pretražuje beach barove na
+željenoj lokaciji, pregleda njihove mape i bira onaj koji mu najviše odgovara, i to tačno
+ležaljku koja mu odgovara.
+Rezervacija se ne svodi na izbor bilo kog mesta, već na izbor pravog mesta.
+Istovremeno,BeachBookervlasnicima beach barova pruža alat za upravljanje koji do
+sada nisu imali. Umesto manuelnog i nepreglednog vođenja rezervacija, sistem omogućava
+jasno definisanje rasporeda ležaljki, upravljanje cenama i uvid u ključne poslovne poka-
+zatelje kao što su zauzetost i ostvareni prihodi. Sve informacije su objedinjene na jednom
+mestu i dostupne u realnom vremenu.
+Na taj način,BeachBookerfunkcioniše kao platforma za krajnje korisnike, ali i kao
+poslovno rešenje za vlasnike beach barova (B2B).
+2. Opis problema
+Zamislimo tipičan dan na plaži.
+Korisnik dolazi sa jasnom idejom: želi dobro mesto, blizu mora, možda u prvom redu,
+možda u hladu, možda u određenom beach baru koji mu se dopada. Međutim, umesto
+opuštenog početka dana, suočava se sa haotičnim i neorganizovanim procesom.
+Počinje potraga.
+Ide od jednog beach bara do drugog, pita za slobodne ležaljke, proverava cene, pokuša-
+va da proceni kvalitet mesta, sve to dok nosi peškir, stvari i već oseća pritisak gužve. Često
+se dešava da su najbolja mesta već zauzeta, dok informacije koje dobija nisu precizne. Ono
+što je trebalo da bude jednostavna odluka postaje frustrirajuće iskustvo.
+Druga opcija nije mnogo bolja.
+Korisnik pokušava unapred da rezerviše ležaljku slanjem poruka putem društvenih
+mreža. Otvara više razgovora, postavlja ista pitanja, čeka odgovore koji kasne ili su ne-
+potpuni. Nema jasne slike rasporeda, nema garancije šta zapravo dobija, niti mogućnosti
+da uporedi različite opcije na jednom mestu.
+A postoji i treći, dobro poznat scenario.
+
+===== PAGE 4 =====
+BeachBooker - tim Tropski Bar 3
+Buđenje u ranim jutarnjim satima, često već oko 7h, samo da bi se stiglo na plažu pre
+svih ostalih. Peškiri se ostavljaju kao „rezervacija“, u nadi da će mesto ostati zauzeto do
+povratka.Umesto opuštenog početka dana, korisnik se od ranog jutra takmiči za prostor
+umesto da uživa u odmoru.
+U svakom od slučajeva, problem je isti: ne postoji sistem. Ne postoji način da korisnik
+vidi, razume i izabere ono što želi unapred.
+BeachBookeruvodi jednostavnu, ali fundamentalnu promenu.
+Umesto haotične pretrage na licu mesta, korisnik dobija potpunu kontrolu, dan ranije,
+iz svog doma. Otvara aplikaciju, pregleda plaže, vidi tačan raspored ležaljki i njihovu
+dostupnost u realnom vremenu. Ne bira nasumično — bira tačno ono mesto koje želi.
+Jedan klik. Rezervacija. Potvrda.
+Sledećeg dana, dolazak na plažu više nije potraga, vec potvrda izbora. Korisnik dolazi,
+pokazuje rezervaciju i zauzima svoju ležaljku. Bez neizvesnosti. Bez gubljenja vremena.
+Bez kompromisa.
+Iskustvo postaje ono što je oduvek trebalo da bude: jednostavno, predvidivo i prijatno.
+Istovremeno, vlasnici plaža prelaze sa manuelnog načina rada na centralizovan sistem.
+Umesto improvizacije, dobijaju strukturu. Umesto pretpostavki, dobijaju podatke. Upra-
+vljanje rasporedom, cenama i rezervacijama postaje pregledno i efikasno.
+BeachBookerne menja samo način rezervacije ležaljki. On redefiniše celokupno isku-
+stvo odlaska na plažu, od trenutka planiranja do trenutka dolaska.
+3. Kategorije korisnika
+Sistem je osmišljen tako da podrži različite tipove korisnika, pri čemu svaki od njih ima
+jasno definisanu ulogu i skup mogućnosti. U skladu sa tim, razlikuju se sledeće kategorije
+korisnika:
+3.1. Gost
+Gost predstavlja korisnika koji pristupa sistemu bez prethodne registracije ili prijave.
+U ovoj ulozi, korisnik može da:
+•pretražuje beach barove po lokaciji,
+•pregleda osnovne informacije o beach barovima,
+•pristupa interaktivnim mapama i vidi raspored ležaljki,
+•proverava dostupnost ležaljki za odabrani datum.
+Gost nema mogućnost rezervacije, ali dobija potpun uvid u ponudu sistema, čime se
+omogućava jednostavno donošenje odluke o daljoj registraciji.
+3.2. Registrovani korisnik
+Registrovani korisnik je korisnik koji je kreirao nalog i prijavio se na sistem.
+Pored svih funkcionalnosti dostupnih gostu, registrovani korisnik može da:
+
+===== PAGE 5 =====
+BeachBooker - tim Tropski Bar 4
+•pretražuje beach barove po lokaciji i karakteristikama,
+•pregleda interaktivne mape beach barova i bira konkretnu ležaljku,
+•bira kategoriju ležaljke (npr. sunce, hlad, premium zona),
+•rezerviše ležaljku za željeni datum i vreme,
+•bira dodatne usluge ili pakete (bundle-ove) ukoliko su dostupni,
+•otkazuje postojeću rezervaciju,
+•pregleda svoje aktivne i prethodne rezervacije.
+Na ovaj način, korisnik prelazi iz faze istraživanja u fazu konkretne interakcije sa
+sistemom, uz jasno definisan i predvidiv proces rezervacije.
+3.3. Vlasnik beach bara
+Vlasnik beach bara predstavlja poslovnog korisnika sistema, koji koristi platformu za
+upravljanje svojim kapacitetima i rezervacijama.
+U ovoj ulozi, korisnik može da:
+•kreira i uređuje beach bar,
+•definiše raspored ležaljki putem interaktivne mape,
+•organizuje ležaljke po kategorijama (npr. hlad, premium zone, blizina mora),
+•postavlja i menja cene po kategorijama ležaljki,
+•kreira i upravlja paketima (bundle-ovima), koji mogu uključivati dodatne usluge
+(npr. piće, hrana, parking),
+•definiše osnovne karakteristike beach bara (tip, kategorija, ponuda),
+•prati zauzetost i ostvarene prihode.
+Ova kategorija korisnika koristi sistem kao alat za optimizaciju poslovanja i efikasnije
+upravljanje resursima.
+3.4. Administrator
+Administrator ima najviši nivo pristupa sistemu i odgovoran je za njegovo održavanje
+i stabilno funkcionisanje.
+Administrator može da:
+•upravlja korisničkim nalozima,
+•nadgleda rad sistema,
+•interveniše u slučaju grešaka ili zloupotreba.
+Na ovaj način se obezbeđuje kontrola i sigurnost celokupnog sistema.
+4. Opis proizvoda
+4.1. Pregled arhitekture sistema
+BeachBookerje realizovan kao web aplikacija zasnovana na tro-slojnoj (3-layer) ar-
+hitekturi, koja jasno razdvaja korisnički interfejs, poslovnu logiku i sloj za skladištenje
+podataka.
+
+===== PAGE 6 =====
+BeachBooker - tim Tropski Bar 5
+Sistem se sastoji od sledećih komponenti:
+•Frontend sloj– realizovan korišćenjem HTML-a, uz dodatak AJAX tehnologi-
+ja za dinamičko ažuriranje sadržaja. Ovaj sloj omogućava korisnicima interakciju
+sa sistemom, uključujući pregled beach barova, prikaz interaktivnih mapa i proces
+rezervacije.
+•Backend sloj– implementiran u okviru Django framework-a, koji obrađuje kori-
+sničke zahteve, sprovodi poslovnu logiku (rezervacije, validacija, upravljanje poda-
+cima) i komunicira sa bazom podataka.
+•Sloj baze podataka– relaciona baza podataka u kojoj se čuvaju podaci o korisni-
+cima, beach barovima, ležaljkama, rezervacijama i ostalim relevantnim entitetima
+sistema. Inicijalna ideja za realizaciju baze je MySQL, ali ovo je podlozno prome-
+nama.
+Komunikacija između frontend i backend sloja odvija se putem HTTP zahteva, pri
+čemu se AJAX koristi za asinhrono učitavanje i osvežavanje podataka (npr. dostupnost
+ležaljki na mapi), bez potrebe za ponovnim učitavanjem cele stranice.
+4.2. Pregled karakteristika
+BeachBookerdonosi skup pažljivo definisanih karakteristika koje unapređuju iskustvo
+kako krajnjih korisnika, tako i vlasnika beach barova.
+•Interaktivna mapa beach bara– korisnici imaju vizuelni pregled rasporeda le-
+žaljki i njihovu dostupnost u realnom vremenu.
+•Precizna rezervacija– umesto nasumičnog izbora, korisnik bira tačno određenu
+ležaljku koja odgovara njegovim preferencijama.
+•Pretraga i poređenje beach barova– omogućava korisnicima da istraže različite
+opcije i pronađu optimalno mesto.
+•Kategorije ležaljki– ležaljke su organizovane po zonama (npr. sunce, hlad, pre-
+mium), što olakšava izbor.
+•Paketi (bundle-ovi)– mogućnost izbora dodatnih usluga uz rezervaciju.
+•Centralizovano upravljanje za vlasnike– vlasnici imaju kontrolu nad raspore-
+dom, cenama i ponudom.
+•Osnovna analitika– pregled zauzetosti i prihoda omogućava bolje razumevanje
+poslovanja.
+•Brz i responzivan interfejs– korišćenjem AJAX tehnologije obezbeđeno je dina-
+mičko korisničko iskustvo bez nepotrebnog osvežavanja stranica.
+Sve karakteristike sistema imaju zajednički cilj — da proces izbora i rezervacije učine
+jednostavnim, preglednim i predvidivim.
+5. Funkcionalni zahtevi
+U ovom odeljku definišu se osnovne funkcije koje sistem treba da obezbedi različitim
+kategorijama korisnika.
+
+===== PAGE 7 =====
+BeachBooker - tim Tropski Bar 6
+5.1. Registracija korisnika
+Ukoliko korisnik nema nalog, može ga kreirati unosom osnovnih podataka. Ti podaci
+se čuvaju u bazi podataka i koriste za kasniju autentikaciju i identifikaciju korisnika u
+sistemu.
+5.2. Autentikacija korisnika
+Registrovani korisnici se prijavljuju u sistem unosom email adrese i lozinke. Ovi podaci
+moraju da odgovaraju postojećim zapisima u bazi podataka. Nakon uspešne autentikacije,
+korisnik dobija pristup funkcionalnostima rezervacije i upravljanja svojim nalozima.
+5.3. Autorizacija gostiju
+Korisnici koji pristupaju sistemu bez registracije (gosti) ne moraju da se autentifiku-
+ju. Njima je omogućen pregled beach barova i interaktivnih mapa, ali bez mogućnosti
+rezervacije.
+5.4. Administriranje sistema
+Administrator sistema ima mogućnost upravljanja korisničkim nalozima i nadgledanja
+rada sistema. Administriranje se vrši putem interfejsa koji omogućava pregled i kontrolu
+ključnih elemenata sistema.
+5.5. Pretraga i pregled beach barova
+Sistem omogućava korisnicima da pretražuju beach barove na osnovu lokacije i osnov-
+nihkarakteristika.Pregledsevršiputemwebinterfejsa,pričemubackendgenerišepodatke
+iz baze i prosleđuje ih korisniku.
+5.6. Pregled interaktivne mape
+Za svaki beach bar dostupna je interaktivna mapa koja prikazuje raspored ležaljki i
+njihovu dostupnost. Podaci se dinamički učitavaju korišćenjem AJAX tehnologije, bez
+potrebe za ponovnim učitavanjem stranice.
+Razlikujemo sledeće kategorije pregleda:
+•5.6.1. Pregled rasporeda ležaljki– korisniku se prikazuje vizuelni raspored svih
+ležaljki u okviru beach bara, uključujući njihove pozicije i kategorije.
+•5.6.2. Pregled dostupnosti ležaljki– za izabrani datum prikazuje se status svake
+ležaljke (slobodna/zauzeta), na osnovu podataka iz baze.
+5.7. Rezervacija ležaljki
+Registrovani korisnici imaju mogućnost rezervacije ležaljki. Proces rezervacije se vrši
+putem web interfejsa, gde se odabrani podaci prosleđuju backend sistemu i čuvaju u bazi.
+Razlikujemo sledeće kategorije rezervacije:
+•5.7.1. Rezervacija pojedinačne ležaljke– korisnik bira konkretnu ležaljku sa
+mape i rezerviše je za željeni datum.
+•5.7.2. Rezervacija po kategoriji– korisnik može birati ležaljku na osnovu katego-
+rije (npr. hlad, sunce, premium zona), nakon čega sistem omogućava izbor konkretne
+pozicije unutar te kategorije.
+
+===== PAGE 8 =====
+BeachBooker - tim Tropski Bar 7
+•5.7.3. Rezervacija sa dodatnim uslugama– korisnik može uz rezervaciju iza-
+brati dodatne usluge ili pakete (bundle-ove), ukoliko su dostupni za dati beach bar.
+5.8. Pregled rezervacija
+Registrovani korisnik ima mogućnost pregleda svojih aktivnih i prethodnih rezervacija.
+Podaci se učitavaju iz baze i prikazuju kroz korisnički interfejs.
+5.9. Otkazivanje rezervacija
+Registrovani korisnici imaju mogućnost otkazivanja svojih rezervacija. Promene se
+evidentiraju u bazi podataka i odmah reflektuju na dostupnost ležaljki.
+5.10. Upravljanje beach barom
+Vlasnici beach barova imaju mogućnost upravljanja svojim kapacitetima i ponudom
+putem sistema.
+Razlikujemo sledeće kategorije upravljanja:
+•5.10.1. Definisanje rasporeda ležaljki– vlasnik unosi i uređuje raspored ležaljki
+putem interaktivne mape, uključujući njihove pozicije i kategorije.
+•5.10.2. Upravljanje kategorijama i cenama– vlasnik definiše kategorije ležaljki
+(npr. hlad, sunce, premium) i postavlja cene za svaku kategoriju.
+•5.10.3. Kreiranje paketa (bundle-ova)– vlasnik može kreirati pakete koji uklju-
+čuju dodatne usluge (npr. piće, parking).
+•5.10.4. Pregled i upravljanje rezervacijama– vlasnik ima uvid u sve rezervacije
+za svoj beach bar i može po potrebi intervenisati.
+•5.10.5. Praćenje zauzetosti i prihoda– sistem omogućava vlasniku uvid u za-
+uzetost ležaljki i ostvarene prihode.
+6. Pretpostavke i ograničenja
+SistemBeachBookerrazvija se uz određene pretpostavke i u okviru jasno definisanih
+ograničenja, koja omogućavaju fokus na osnovne funkcionalnosti u okviru osnovne verzije.
+Podrazumeva se da korisnici pristupaju sistemu putem savremenog web browser-a, sa
+uređaja koji ima stabilnu internet konekciju. Interfejs sistema optimizovan je za standard-
+ne rezolucije i moderne browser-e.
+Raspored ležaljki u okviru beach bara definiše vlasnik manuelno, korišćenjem inter-
+aktivne mape. Sistem ne generiše automatski raspored niti optimizuje pozicije ležaljki u
+ovoj fazi razvoja.
+Dostupnost ležaljki zasniva se isključivo na podacima o rezervacijama u bazi podataka.
+Sistem ne uključuje integraciju sa fizičkim uređajima ili senzorima na plaži, te ne može
+detektovati stvarno fizičko zauzeće ležaljki.
+Sistem ne implementira napredne algoritme za dinamičko određivanje cena, predik-
+ciju potražnje ili optimizaciju poslovanja u trenutnoj verziji. Analitika je ograničena na
+osnovne pokazatelje kao što su zauzetost i ostvareni prihodi.
+
+===== PAGE 9 =====
+BeachBooker - tim Tropski Bar 8
+Rezervacije su vezane za konkretan datum i vremenski okvir definisan na nivou be-
+ach bara. Sistem ne podržava kompleksne scenarije poput deljenja termina ili parcijalnih
+rezervacija u okviru dana.
+Plaćanje rezervacija može biti simulirano ili pojednostavljeno u okviru ove verzije, bez
+integracije sa spoljnim platnim sistemima.
+Sistem ne uključuje mobilnu aplikaciju u ovoj fazi razvoja, već je dostupan isključivo
+kao web aplikacija.
+Ova ograničenja omogućavaju fokus na ključnu vrednost sistema, precizan izbor i
+rezervaciju ležaljki putem interaktivne mape, uz mogućnost proširenja funkcionalnosti u
+narednim verzijama.
+7. Kvalitet
+Osnovni cilj nije samo da sistem funkcioniše, već da funkcioniše predvidivo, brzo i bez
+grešaka, u svakom trenutku kada je korisniku potreban.
+Funkcionalna ispravnost sistema obezbeđuje se testiranjem svih ključnih scenarija ko-
+rišćenja, uključujući registraciju, pregled mapa, rezervaciju i otkazivanje ležaljki. Posebna
+pažnja posvećena je situacijama koje mogu dovesti do konflikta, kao što su istovremeni
+pokušaji rezervacije iste ležaljke.
+Performanse sistema moraju omogućiti brzo učitavanje i prikaz interaktivnih mapa,
+kao i trenutni odziv prilikom rezervacije. Korišćenjem AJAX tehnologije obezbeđuje se
+dinamičko ažuriranje podataka bez zastoja i nepotrebnog osvežavanja stranica.
+Pouzdanost sistema podrazumeva tačnost podataka o dostupnosti ležaljki u svakom
+trenutku. Korisnik mora imati poverenje da je rezervacija koju je izvršio validna i da će
+njegovo mesto biti dostupno po dolasku.
+Upotrebljivost predstavlja ključnu komponentu kvaliteta. Interfejs sistema mora biti
+jasan, intuitivan i lako razumljiv, bez potrebe za dodatnim objašnjenjima. Proces rezer-
+vacije treba da bude jednostavan i da zahteva minimalan broj koraka.
+Sistem mora biti otporan na greške, kako korisničke tako i sistemske. U slučaju ne-
+validnih unosa ili neuspešnih operacija, korisniku se prikazuju jasne i razumljive poruke
+koje omogućavaju brzo rešavanje problema.
+KvalitetBeachBooker-a ogleda se u tome da korisnik ne razmišlja o sistemu, već samo
+o svom iskustvu na plaži.
+8. Nefunkcionalni zahtevi
+Nefunkcionalni zahtevi definišu uslove koje sistem mora da ispuni kako bi obezbedio
+stabilno, pouzdano i kvalitetno korisničko iskustvo.
+8.1. Sistemski zahtevi
+SistemBeachBookermorabitidostupanputemsavremenihwebbrowser-a,bezpotrebe
+za instalacijom dodatnog softvera. Korisnički interfejs realizovan je korišćenjem HTML-a
+
+===== PAGE 10 =====
+BeachBooker - tim Tropski Bar 9
+i JavaScript-a, uz podršku za AJAX tehnologiju.
+Backend sistema implementiran je korišćenjem Django framework-a i mora biti spo-
+soban da obradi istovremene zahteve više korisnika bez degradacije performansi.
+Baza podataka mora omogućiti pouzdano čuvanje i pristup podacima o korisnicima,
+rezervacijama, ležaljkama i beach barovima. Sistem mora obezbediti konzistentnost po-
+dataka, posebno u scenarijima istovremenih rezervacija.
+Sistem treba da bude kompatibilan sa standardnim serverskim okruženjima i da po-
+država jednostavno postavljanje i održavanje.
+8.2. Ostali zahtevi
+Sistem mora obezbediti brz odziv, tako da učitavanje stranica i interaktivnih mapa
+traje minimalno vreme. Operacije kao što su rezervacija i otkazivanje moraju se izvršavati
+trenutno ili uz minimalno kašnjenje.
+Bezbednost sistema podrazumeva zaštitu korisničkih podataka, posebno podataka za
+autentikaciju. Lozinke moraju biti čuvane u bezbednom obliku, a pristup funkcionalno-
+stima mora biti ograničen u skladu sa ulogama korisnika.
+Sistem mora biti skalabilan, kako bi mogao da podrži rast broja korisnika i beach
+barova bez potrebe za značajnim promenama u arhitekturi.
+Interfejssistemamorabitiresponzivaniprilagođenrazličitimuređajimairezolucijama,
+uz očuvanje konzistentnog izgleda i funkcionalnosti.
+Pouzdanost sistema podrazumeva dostupnost i stabilan rad u kontinuitetu, uz mini-
+malne prekide u radu.
+Vizuelni aspekt sistema treba da bude moderan, jasan i usklađen sa očekivanjima
+korisnika, kako bi korišćenje sistema bilo prijatno i intuitivno.
+9. Plan i prioriteti
+Razvoj sistemaBeachBookerorganizovan je iterativno, sa jasnim fokusom na isporuku
+funkcionalne i zaokružene minimalne verzije sistema (MVP), koja rešava osnovni problem
+korisnika.
+Prioritet u razvoju imaju funkcionalnosti koje direktno utiču na osnovno korisnič-
+ko iskustvo: pretraga beach barova, prikaz interaktivne mape i rezervacija ležaljki. Ove
+funkcionalnosti čine jezgro sistema i predstavljaju njegovu ključnu vrednost:
+•registracija i autentikacija korisnika,
+•pretraga i pregled beach barova,
+•prikaz interaktivne mape ležaljki,
+•rezervacija i otkazivanje ležaljki,
+•osnovne funkcionalnosti za vlasnike beach barova (definisanje rasporeda i cena).
+Nakon stabilizacije osnovne verzije, u narednim fazama/iteracijama razvoja planirano
+je unapređenje sistema kroz dodatne funkcionalnosti koje proširuju njegovu vrednost:
+•uvođenje naprednije analitike za vlasnike beach barova,
+•podrška za pakete (bundle-ove) i dodatne usluge,
+
+===== PAGE 11 =====
+BeachBooker - tim Tropski Bar 10
+•unapređenje korisničkog interfejsa i performansi sistema,
+•potencijalna integracija sa sistemima za online plaćanje.
+Dalji razvoj sistema može uključivati i funkcionalnosti koje uvode viši nivo automa-
+tizacije i optimizacije, kao što su dinamičko određivanje cena ili predikcija potražnje.
+Takođe, jedna od ideja za unapređenje sistema jeste AI integracija, koja bi korisnicima
+omogućila da, na osnovu svojih preferencija i konteksta (npr. broj osoba, uzrast osoba,
+željeni ambijent, budžet), u svega nekoliko koraka dobiju preporuku idealnih ležaljki za
+njih. Ove funkcionalnosti nisu deo inicijalne verzije sistema, ali predstavljaju prirodan
+pravac daljeg razvoja.

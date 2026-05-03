@@ -1,0 +1,97 @@
+# -----------------------------------------------------------------------------
+# Python
+# -----------------------------------------------------------------------------
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+pip-wheel-metadata/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# Virtual environments (recreate from requirements / lockfile)
+.venv/
+venv/
+ENV/
+env/
+
+# -----------------------------------------------------------------------------
+# Django
+# -----------------------------------------------------------------------------
+# Local / deployment logs
+*.log
+logs/
+
+# Default collectstatic output (adjust if you set STATIC_ROOT to something else)
+staticfiles/
+collected_static/
+
+# User-uploaded media in dev (adjust if you commit small fixture media on purpose)
+media/
+
+# Optional: SQLite if you use it only for quick local runs while MySQL is canonical
+*.sqlite3
+*.db
+
+# Local overrides (uncomment if you use this pattern instead of env vars)
+# local_settings.py
+
+# -----------------------------------------------------------------------------
+# MySQL & secrets
+# -----------------------------------------------------------------------------
+# Connection strings, DB user/password, Django SECRET_KEY — never commit these.
+.env
+.env.*
+!.env.example
+
+# Client SSL keys / certs if you mount them near the project
+*.pem
+*.key
+*.crt
+
+# Put one-off SQL dumps / exports here so they never get pushed by mistake
+db_dumps/
+*.sql.gz
+
+# -----------------------------------------------------------------------------
+# Tests & quality tools
+# -----------------------------------------------------------------------------
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+.mypy_cache/
+.ruff_cache/
+
+# -----------------------------------------------------------------------------
+# OS & editors
+# -----------------------------------------------------------------------------
+.DS_Store
+Thumbs.db
+Desktop.ini
+.idea/
+*.swp
+*.swo
+
+# -----------------------------------------------------------------------------
+# Optional: if you later add Node (bundler, linters) for richer front-end / AJAX
+# -----------------------------------------------------------------------------
+# node_modules/
+# npm-debug.log*
+# .parcel-cache/

@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>BeachBooker — Reserve Your Perfect Spot</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<nav class="nav"><div class="nav__inner">
+  <a href="index.html" class="nav__logo">Beach<span>Booker</span></a>
+  <div class="nav__links">
+    <a href="index.html" class="active">Home</a>
+    <a href="explore.html">Explore</a>
+    <a href="my-reservations.html">My Bookings</a>
+    <a href="owner-dashboard.html">For Owners</a>
+  </div>
+  <div class="nav__right">
+    <a href="login.html" class="btn btn--ghost btn--pill">Log in</a>
+    <a href="register.html" class="btn btn--teal btn--pill">Sign up free</a>
+  </div>
+</div></nav>
+
+<!-- ====== HERO ====== -->
+<section class="hero">
+  <div class="hero__bg" style="background-image:url('https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=1800&q=80')"></div>
+  <div class="hero__gradient"></div>
+  <div class="container">
+    <div class="hero__inner">
+      <div class="hero__text">
+        <div class="hero__badge">
+          #1 Beach reservation platform
+        </div>
+        <h1 class="hero__title">Your perfect beach day starts with the <em>perfect spot</em></h1>
+        <p class="hero__desc">Not just any spot — the right one.</p>
+        <div class="hero__btns">
+          <a href="explore.html" class="btn btn--teal btn--lg btn--pill">Explore beaches</a>
+          <a href="#how" class="btn btn--white btn--lg btn--pill">How it works</a>
+        </div>
+        <div class="hero__stats">
+          <div class="hero__stat"><b>200+</b><span>Beach bars</span></div>
+          <div class="hero__stat"><b>5,000+</b><span>Spots</span></div>
+          <div class="hero__stat"><b>50k+</b><span>Happy guests</span></div>
+        </div>
+      </div>
+      <div class="hero__visual">
+        <div class="hero__card">
+          <div class="hero__card-img">
+            <img src="https://images.unsplash.com/photo-1519046904884-53103b34b206?w=600&q=80" alt="Beach bar">
+          </div>
+          <div class="hero__card-row">
+            <div>
+              <div class="hero__card-name">Blue Horizon Beach Club</div>
+              <div class="hero__card-loc">
+                <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg>
+                Budva, Montenegro
+              </div>
+            </div>
+            <div class="hero__card-price">&euro;15 <small>/spot</small></div>
+          </div>
+        </div>
+        <div class="hero__float hero__float--1">
+          <div class="hero__float-icon" style="background:var(--green-light);color:var(--green)">
+            <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+          </div>
+          Booking confirmed!
+        </div>
+        <div class="hero__float hero__float--2" style="animation-delay:.5s">
+          <div class="hero__float-icon" style="background:var(--amber-light);color:var(--amber)">
+            <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z"/></svg>
+          </div>
+          4.9 &middot; 320 reviews
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ====== SEARCH BAR ====== -->
+<div class="search-wrap"><div class="container">
+  <div class="search">
+    <div class="search__field">
+      <div class="search__field-icon"><svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg></div>
+      <div class="search__field-body"><span>Location</span><input type="text" placeholder="Where are you going?"></div>
+    </div>
+    <div class="search__field">
+      <div class="search__field-icon"><svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></div>
+      <div class="search__field-body"><span>Date</span><input type="date"></div>
+    </div>
+    <div class="search__field">
+      <div class="search__field-icon"><svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg></div>
+      <div class="search__field-body"><span>Guests</span><input type="number" placeholder="2 guests" min="1" max="10"></div>
+    </div>
+    <button class="search__btn" onclick="location.href='explore.html'"><svg fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg></button>
+  </div>
+</div></div>
+
+<!-- ====== POPULAR ====== -->
+<section class="section" style="padding-bottom:64px">
+  <div class="container">
+    <div class="sh"><div class="sh__row">
+      <div><div class="sh__tag">Popular spots</div><h2 class="sh__title">Trending beach bars</h2><p class="sh__sub">Hand-picked by travelers. Book your spot before it's gone.</p></div>
+      <a href="explore.html" class="btn btn--outline btn--pill">View all &rarr;</a>
+    </div></div>
+    <div class="g g-3">
+      <a href="beach-bar.html" class="card">
+        <div class="card__img"><img src="https://images.unsplash.com/photo-1519046904884-53103b34b206?w=600&q=80" alt=""><div class="card__img-gradient"></div><div class="card__badge">Popular</div><button class="card__fav" onclick="event.preventDefault()"><svg viewBox="0 0 24 24"><path d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z"/></svg></button></div>
+        <div class="card__body"><div class="card__name">Blue Horizon Beach Club</div><div class="card__loc"><svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg>Budva, Montenegro</div><div class="card__foot"><div class="card__price">&euro;15 <small>/spot</small></div><div class="card__stars"><svg viewBox="0 0 24 24"><path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z"/></svg>4.8</div></div></div>
+      </a>
+      <a href="beach-bar.html" class="card">
+        <div class="card__img"><img src="https://images.unsplash.com/photo-1540541338287-41700207dee6?w=600&q=80" alt=""><div class="card__img-gradient"></div><div class="card__badge" style="background:var(--teal);color:#fff">Top Rated</div><button class="card__fav" onclick="event.preventDefault()"><svg viewBox="0 0 24 24"><path d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z"/></svg></button></div>
+        <div class="card__body"><div class="card__name">Sunset Lounge</div><div class="card__loc"><svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg>Hvar, Croatia</div><div class="card__foot"><div class="card__price">&euro;20 <small>/spot</small></div><div class="card__stars"><svg viewBox="0 0 24 24"><path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z"/></svg>4.9</div></div></div>
+      </a>
+      <a href="beach-bar.html" class="card">
+        <div class="card__img"><img src="https://images.unsplash.com/photo-1510414842594-a61c69b5ae57?w=600&q=80" alt=""><div class="card__img-gradient"></div><button class="card__fav" onclick="event.preventDefault()"><svg viewBox="0 0 24 24"><path d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z"/></svg></button></div>
+        <div class="card__body"><div class="card__name">Emerald Bay Resort</div><div class="card__loc"><svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg>Thassos, Greece</div><div class="card__foot"><div class="card__price">&euro;12 <small>/spot</small></div><div class="card__stars"><svg viewBox="0 0 24 24"><path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z"/></svg>4.7</div></div></div>
+      </a>
+    </div>
+  </div>
+</section>
+
+<!-- ====== HOW IT WORKS ====== -->
+<section class="section section--alt" id="how" style="padding-top:56px">
+  <div class="container">
+    <div class="sh sh--center"><div class="sh__tag">Easy as 1-2-3</div><h2 class="sh__title">How it works</h2><p class="sh__sub">Reserve your dream beach spot in three simple steps.</p></div>
+    <div class="steps">
+      <div class="step">
+        <div class="step__num step__num--1">1</div>
+        <h3 class="step__title">Find a beach bar</h3>
+        <p class="step__desc">Browse destinations, compare ratings, and find your perfect match.</p>
+      </div>
+      <div class="step">
+        <div class="step__num step__num--2">2</div>
+        <h3 class="step__title">Pick your exact spot</h3>
+        <p class="step__desc">Pick your exact spot on the interactive map. You decide.</p>
+      </div>
+      <div class="step">
+        <div class="step__num step__num--3">3</div>
+        <h3 class="step__title">Book &amp; relax</h3>
+        <p class="step__desc">Confirm instantly. Show up, sit down, and enjoy. It's that simple.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ====== FEATURE: MAP ====== -->
+<section class="section">
+  <div class="container">
+    <div class="feat">
+      <div class="feat__img"><img src="https://images.unsplash.com/photo-1536675274466-43d4596a4609?w=800&q=80" alt="Beach view"></div>
+      <div>
+        <div class="sh__tag">Interactive maps</div>
+        <h2 class="sh__title">See the exact layout<br>before you book</h2>
+        <p style="color:var(--text-2);margin-top:12px;line-height:1.7">Every beach bar on BeachBooker has a real-time interactive map showing every spot, its zone, and live availability. No more guessing.</p>
+        <div class="feat__list">
+          <div class="feat__item"><div class="feat__icon" style="background:var(--teal-50);color:var(--teal)"><svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="9" y1="3" x2="9" y2="21"/></svg></div><div><h4>Visual spot grid</h4><p>Color-coded availability at a glance.</p></div></div>
+          <div class="feat__item"><div class="feat__icon" style="background:var(--teal-50);color:var(--teal)"><svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg></div><div><h4>Premium, shade &amp; sun zones</h4><p>Filter by what matters to you.</p></div></div>
+          <div class="feat__item"><div class="feat__icon" style="background:var(--teal-50);color:var(--teal)"><svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></div><div><h4>Real-time updates</h4><p>What you see is what you get.</p></div></div>
+        </div>
+        <a href="explore.html" class="btn btn--teal btn--pill" style="margin-top:32px">Browse beach bars &rarr;</a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ====== MORE DESTINATIONS ====== -->
+<section class="section section--alt">
+  <div class="container">
+    <div class="sh"><div class="sh__row">
+      <div><div class="sh__tag">Destinations</div><h2 class="sh__title">Explore more</h2><p class="sh__sub">Beach bars across the best coastal destinations.</p></div>
+    </div></div>
+    <div class="chips" style="margin-bottom:32px">
+      <div class="chip on">All</div><div class="chip">Montenegro</div><div class="chip">Croatia</div><div class="chip">Greece</div><div class="chip">Turkey</div><div class="chip">Spain</div>
+    </div>
+    <div class="g g-4">
+      <a href="beach-bar.html" class="card"><div class="card__img"><img src="https://images.unsplash.com/photo-1520250497591-112f2f40a3f4?w=500&q=80" alt=""><div class="card__img-gradient"></div><button class="card__fav" onclick="event.preventDefault()"><svg viewBox="0 0 24 24"><path d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z"/></svg></button></div><div class="card__body"><div class="card__name">Violet Shore</div><div class="card__loc"><svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg>Santorini</div><div class="card__foot"><div class="card__price">&euro;25 <small>/spot</small></div><div class="card__stars"><svg viewBox="0 0 24 24"><path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z"/></svg>4.6</div></div></div></a>
+      <a href="beach-bar.html" class="card"><div class="card__img"><img src="https://images.unsplash.com/photo-1504681869696-d977211a5f4c?w=500&q=80" alt=""><div class="card__img-gradient"></div><button class="card__fav" onclick="event.preventDefault()"><svg viewBox="0 0 24 24"><path d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z"/></svg></button></div><div class="card__body"><div class="card__name">Golden Sands</div><div class="card__loc"><svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg>Neum</div><div class="card__foot"><div class="card__price">&euro;10 <small>/spot</small></div><div class="card__stars"><svg viewBox="0 0 24 24"><path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z"/></svg>4.5</div></div></div></a>
+      <a href="beach-bar.html" class="card"><div class="card__img"><img src="https://images.unsplash.com/photo-1506929562872-bb421503ef21?w=500&q=80" alt=""><div class="card__img-gradient"></div><button class="card__fav" onclick="event.preventDefault()"><svg viewBox="0 0 24 24"><path d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z"/></svg></button></div><div class="card__body"><div class="card__name">Aqua Paradise</div><div class="card__loc"><svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg>Bar, MNE</div><div class="card__foot"><div class="card__price">&euro;18 <small>/spot</small></div><div class="card__stars"><svg viewBox="0 0 24 24"><path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z"/></svg>4.8</div></div></div></a>
+      <a href="beach-bar.html" class="card"><div class="card__img"><img src="https://images.unsplash.com/photo-1501426026826-31c667bdf23d?w=500&q=80" alt=""><div class="card__img-gradient"></div><button class="card__fav" onclick="event.preventDefault()"><svg viewBox="0 0 24 24"><path d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z"/></svg></button></div><div class="card__body"><div class="card__name">Coral Cove</div><div class="card__loc"><svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg>Antalya</div><div class="card__foot"><div class="card__price">&euro;14 <small>/spot</small></div><div class="card__stars"><svg viewBox="0 0 24 24"><path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z"/></svg>4.4</div></div></div></a>
+    </div>
+    <div style="text-align:center;margin-top:48px"><a href="explore.html" class="btn btn--outline btn--lg btn--pill">Show more &rarr;</a></div>
+  </div>
+</section>
+
+<!-- ====== CTA ====== -->
+<section class="section">
+  <div class="container">
+    <div class="cta">
+      <div class="cta__bg" style="background-image:url('https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=1400&q=80')"></div>
+      <div class="cta__text">
+        <h2>Ready to book your perfect beach day?</h2>
+        <p>Join thousands of happy beachgoers who never worry about finding a spot again.</p>
+      </div>
+      <div class="cta__action"><a href="register.html" class="btn btn--white btn--lg btn--pill">Get started free &rarr;</a></div>
+    </div>
+  </div>
+</section>
+
+<!-- ====== FOOTER ====== -->
+<footer class="footer"><div class="container">
+  <div class="footer__grid">
+    <div>
+      <div class="footer__brand">Beach<span>Booker</span></div>
+      <p class="footer__desc">The easiest way to find and reserve your perfect spot at the beach. No early wake-ups. No guessing.</p>
+      <div class="footer__socials">
+        <a href="#"><svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M18 2h-3a5 5 0 00-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 011-1h3z"/></svg></a>
+        <a href="#"><svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="2" y="2" width="20" height="20" rx="5"/><path d="M16 11.37A4 4 0 1112.63 8 4 4 0 0116 11.37z"/><line x1="17.5" y1="6.5" x2="17.51" y2="6.5"/></svg></a>
+        <a href="#"><svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M23 3a10.9 10.9 0 01-3.14 1.53 4.48 4.48 0 00-7.86 3v1A10.66 10.66 0 013 4s-4 9 5 13a11.64 11.64 0 01-7 2c9 5 20 0 20-11.5 0-.28-.03-.56-.08-.83A7.72 7.72 0 0023 3z"/></svg></a>
+      </div>
+    </div>
+    <div><div class="footer__h">Product</div><div class="footer__links"><a href="explore.html">Explore</a><a href="#how">How it works</a><a href="#">Pricing</a><a href="#">FAQ</a></div></div>
+    <div><div class="footer__h">For Owners</div><div class="footer__links"><a href="owner-dashboard.html">Dashboard</a><a href="#">List your bar</a><a href="#">Resources</a></div></div>
+    <div><div class="footer__h">Company</div><div class="footer__links"><a href="#">About us</a><a href="#">Contact</a><a href="#">Privacy</a><a href="#">Terms</a></div></div>
+  </div>
+  <div class="footer__bot"><span>&copy; 2026 BeachBooker</span><span>Tropski Bar</span></div>
+</div></footer>
+
+</body>
+</html>
