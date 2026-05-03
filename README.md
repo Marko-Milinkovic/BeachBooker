@@ -23,6 +23,5 @@ python -m http.server 8000 --directory prototype
 
 Then visit `http://localhost:8000/index.html`.
 
-## Local configuration (later)
-
-When the Django app is added, use a `.env` file for secrets and database settings (see `.gitignore`). Commit only a `.env.example` with placeholder keys and no real passwords.
+## Team Tropski Bar
+Members: Marko Milinkovic, Andrea Ponjavic, Nikola Bajat, Jovan Milinkovic
