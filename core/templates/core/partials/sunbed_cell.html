@@ -1,4 +1,8 @@
-<div class="sb {{ cell.css_classes }}" data-label="{{ cell.label }}" data-price="{{ cell.price }}">
+<div class="sb {{ cell.css_classes }}{% if not cell.is_taken %} sb--clickable{% endif %}"
+     data-sunbed-id="{{ cell.sunbed.id }}"
+     data-label="{{ cell.label }}"
+     data-price="{{ cell.price }}"
+     {% if not cell.is_taken %}role="button" tabindex="0"{% endif %}>
   {{ cell.label }}
   {% if not cell.is_taken %}
   <span class="sb-tooltip">{{ cell.category_name }} &middot; &euro;{{ cell.price|floatformat:0 }}</span>

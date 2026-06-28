@@ -46,7 +46,7 @@
       </div>
       <div class="info-bar__item">
         <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg>
-        {{ free_spots }} available{% if filter_date == today %} today{% else %} on {{ filter_date|date:"M j" }}{% endif %}
+        <span id="info-availability">{{ free_spots }} available{% if filter_date == today %} today{% else %} on {{ filter_date|date:"M j" }}{% endif %}</span>
       </div>
       {% if amenities %}
       <div class="info-bar__chips">
@@ -60,11 +60,17 @@
 </section>
 
 <section class="section" style="padding-top:32px">
-  <div class="container">
-    <div class="date-strip">
+  <div class="container"
+       id="beach-bar-booking"
+       data-bar-id="{{ bar.id }}"
+       data-api-url="{% url 'api_bar_sunbeds' bar.id %}"
+       data-initial-date="{{ filter_date|date:'Y-m-d' }}"
+       data-today="{{ today|date:'Y-m-d' }}">
+    <div class="date-strip" id="date-strip">
       {% for pick in date_quick_picks %}
       <a href="{% url 'beach_bar' bar.id %}?date={{ pick.date|date:'Y-m-d' }}"
-         class="chip{% if pick.date == filter_date %} on{% endif %}">{{ pick.label }}</a>
+         class="chip date-chip{% if pick.date == filter_date %} on{% endif %}"
+         data-date="{{ pick.date|date:'Y-m-d' }}">{{ pick.label }}</a>
       {% endfor %}
     </div>
 
@@ -80,12 +86,16 @@
         </div>
         {% endif %}
 
-        <form method="get" action="{% url 'beach_bar' bar.id %}" class="bpanel__fields">
+        <div class="bpanel__fields">
           <div class="field">
             <label for="bp-date">Date</label>
-            <input type="date" id="bp-date" name="date" class="input" value="{{ filter_date|date:'Y-m-d' }}" onchange="this.form.submit()">
+            <input type="date" id="bp-date" class="input" value="{{ filter_date|date:'Y-m-d' }}">
           </div>
-        </form>
+          <div class="field">
+            <label for="sel-display">Selected spots</label>
+            <input type="text" id="sel-display" class="input" readonly placeholder="Tap spots on the map">
+          </div>
+        </div>
 
         {% if categories %}
         <div class="category-list">
@@ -98,8 +108,13 @@
         </div>
         {% endif %}
 
+        <div class="bpanel__summary">
+          <div class="bpanel__line"><span>Spots (<span id="sum-bed">0</span>)</span><span id="sum-price">&euro;0</span></div>
+          <div class="bpanel__total"><span>Total</span><span id="sum-total">&euro;0</span></div>
+        </div>
+
         <button type="button" class="btn btn--teal btn--lg" id="reserve-btn" disabled>Book now</button>
-        <p class="bpanel__hint">Booking and spot selection coming in the next slice</p>
+        <p class="bpanel__hint">Select spots to preview total — booking comes in the next slice</p>
       </aside>
     </div>
 
@@ -121,4 +136,8 @@
     {% endif %}
   </div>
 </section>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'core/js/beach_bar.js' %}"></script>
 {% endblock %}

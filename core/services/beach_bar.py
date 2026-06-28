@@ -90,6 +90,39 @@ def build_sunbed_grid(bar, filter_date):
     return [rows[row] for row in sorted(rows)]
 
 
+def serialize_sunbed_grid(grid_rows):
+    return [
+        [
+            {
+                "id": cell["sunbed"].id,
+                "label": cell["label"],
+                "category": cell["category_name"],
+                "price": str(cell["price"]),
+                "is_taken": cell["is_taken"],
+                "css_classes": cell["css_classes"],
+            }
+            for cell in row
+        ]
+        for row in grid_rows
+    ]
+
+
+def get_sunbed_map_payload(bar, filter_date=None):
+    if filter_date is None:
+        filter_date = date.today()
+
+    grid_rows = build_sunbed_grid(bar, filter_date)
+    total_spots = Sunbed.objects.filter(beach_bar=bar).count()
+    reserved_count = len(get_reserved_sunbed_ids(bar, filter_date))
+
+    return {
+        "date": filter_date.isoformat(),
+        "free_spots": max(total_spots - reserved_count, 0),
+        "total_spots": total_spots,
+        "rows": serialize_sunbed_grid(grid_rows),
+    }
+
+
 def get_beach_bar_page_context(bar, filter_date=None):
     if filter_date is None:
         filter_date = date.today()

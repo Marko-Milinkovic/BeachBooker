@@ -193,6 +193,10 @@
   opacity: 0;
 }
 
+.sb--clickable {
+  cursor: pointer;
+}
+
 .category-list {
   display: flex;
   flex-direction: column;
