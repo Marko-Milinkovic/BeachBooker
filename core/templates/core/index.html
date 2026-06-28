@@ -1,12 +1,23 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>BeachBooker</title>
-</head>
-<body>
-  <h1>BeachBooker</h1>
-  <p>Django scaffold is running.</p>
-</body>
-</html>
+{% extends "core/base.html" %}
+
+{% block title %}BeachBooker — Reserve Your Perfect Spot{% endblock %}
+
+{% block content %}
+<section class="hero">
+  <div class="hero__bg" style="background-image:url('https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=1800&q=80')"></div>
+  <div class="hero__gradient"></div>
+  <div class="container">
+    <div class="hero__inner">
+      <div class="hero__text">
+        <div class="hero__badge">#1 Beach reservation platform</div>
+        <h1 class="hero__title">Your perfect beach day starts with the <em>perfect spot</em></h1>
+        <p class="hero__desc">Not just any spot — the right one.</p>
+        <div class="hero__btns">
+          <a href="{% url 'explore' %}" class="btn btn--teal btn--lg btn--pill">Explore beaches</a>
+          <a href="#how" class="btn btn--white btn--lg btn--pill">How it works</a>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+{% endblock %}

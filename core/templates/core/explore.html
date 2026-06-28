@@ -1,0 +1,56 @@
+{% extends "core/base.html" %}
+
+{% block title %}Explore beach bars — BeachBooker{% endblock %}
+
+{% block content %}
+<header class="ph"><div class="container">
+  <h1 class="ph__title">Explore beach bars</h1>
+  <p class="ph__sub">Find your beach. Pick your spot.</p>
+</div></header>
+
+<section class="section section--alt" style="padding-top:40px;padding-bottom:96px">
+  <div class="container">
+    <div class="explore">
+      <aside class="filters">
+        <form method="get" action="{% url 'explore' %}">
+          <div class="filters__title">Filters</div>
+
+          <div class="filters__group">
+            <label class="filters__group-label" for="filter-loc">Location</label>
+            <input id="filter-loc" name="city" type="text" class="input" placeholder="City or region" value="{{ city }}">
+          </div>
+
+          <div class="filters__group">
+            <label class="filters__group-label" for="filter-date">Date</label>
+            <input id="filter-date" name="date" type="date" class="input" value="{{ filter_date|date:'Y-m-d' }}">
+          </div>
+
+          <button type="submit" class="btn btn--teal btn--pill" style="width:100%">Apply</button>
+          <a href="{% url 'explore' %}" class="btn btn--ghost btn--pill" style="width:100%;margin-top:8px;font-size:.8125rem;text-align:center;display:block">Clear all</a>
+        </form>
+      </aside>
+
+      <div>
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px">
+          <span style="font-size:.9375rem;color:var(--text-2);font-weight:500"><strong style="color:var(--text)">{{ bar_count }}</strong> beach bar{{ bar_count|pluralize }} found</span>
+        </div>
+
+        {% if bars %}
+        <div class="g g-2">
+          {% for bar in bars %}
+            {% include "core/partials/beach_card.html" %}
+          {% endfor %}
+        </div>
+        {% else %}
+        <div style="text-align:center;padding:64px 24px">
+          <svg width="48" height="48" fill="none" stroke="var(--text-3)" stroke-width="1.5" viewBox="0 0 24 24" style="margin:0 auto 16px"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          <h3 style="font-size:1.125rem;font-weight:700;margin-bottom:6px">No beach bars found</h3>
+          <p style="color:var(--text-2);font-size:.9375rem;margin-bottom:20px">Try adjusting your filters or searching a different location.</p>
+          <a href="{% url 'explore' %}" class="btn btn--outline btn--pill">Clear filters</a>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</section>
+{% endblock %}

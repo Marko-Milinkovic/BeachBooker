@@ -1,0 +1,13 @@
+{% extends "core/base.html" %}
+
+{% block title %}{{ bar.name }} — BeachBooker{% endblock %}
+
+{% block content %}
+<header class="ph"><div class="container">
+  <h1 class="ph__title">{{ bar.name }}</h1>
+  <p class="ph__sub">{{ bar.city }} — detail page coming soon</p>
+</div></header>
+<section class="section"><div class="container" style="text-align:center;padding:48px 0">
+  <a href="{% url 'explore' %}" class="btn btn--outline btn--pill">Back to explore</a>
+</div></section>
+{% endblock %}

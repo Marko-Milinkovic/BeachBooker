@@ -1,0 +1,13 @@
+<nav class="nav"><div class="nav__inner">
+  <a href="{% url 'index' %}" class="nav__logo">Beach<span>Booker</span></a>
+  <div class="nav__links">
+    <a href="{% url 'index' %}"{% if active_nav == 'home' %} class="active"{% endif %}>Home</a>
+    <a href="{% url 'explore' %}"{% if active_nav == 'explore' %} class="active"{% endif %}>Explore</a>
+    <a href="#">My Bookings</a>
+    <a href="#">For Owners</a>
+  </div>
+  <div class="nav__right">
+    <a href="#" class="btn btn--ghost btn--pill">Log in</a>
+    <a href="#" class="btn btn--teal btn--pill">Sign up free</a>
+  </div>
+</div></nav>

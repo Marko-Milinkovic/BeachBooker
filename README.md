@@ -67,6 +67,14 @@ venv\bin\python manage.py runserver
 
 Open `http://127.0.0.1:8000/`.
 
+**Demo data (optional)**
+
+```bash
+venv\bin\python manage.py seed_demo
+```
+
+Creates sample users (`owner@beachbooker.test`, `guest@beachbooker.test`, `admin@beachbooker.test` / password `demo1234`), two beach bars, sunbeds, and sample reservations. Safe to run more than once.
+
 **Do not commit `.env`** — only `.env.example` (placeholders).
 
 ### After `git pull` (already set up locally)

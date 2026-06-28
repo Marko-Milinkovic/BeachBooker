@@ -1,0 +1,18 @@
+<a href="{% url 'beach_bar' bar.id %}" class="card">
+  <div class="card__img">
+    <img src="{{ bar.image_url }}" alt="{{ bar.name }}">
+    <div class="card__img-gradient"></div>
+    <button class="card__fav" type="button" onclick="event.preventDefault()"><svg viewBox="0 0 24 24"><path d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z"/></svg></button>
+  </div>
+  <div class="card__body">
+    <div class="card__name">{{ bar.name }}</div>
+    <div class="card__loc"><svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg>{{ bar.city }}, Montenegro</div>
+    <div class="card__avail"><svg fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/></svg>{{ bar.free_spots }} spot{{ bar.free_spots|pluralize }} left{% if filter_date == today %} today{% endif %}</div>
+    <div class="card__foot">
+      <div class="card__price">&euro;{{ bar.min_price|floatformat:0 }} <small>/spot</small></div>
+      {% if bar.avg_rating %}
+      <div class="card__stars"><svg viewBox="0 0 24 24"><path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z"/></svg>{{ bar.avg_rating|floatformat:1 }}</div>
+      {% endif %}
+    </div>
+  </div>
+</a>
