@@ -1,0 +1,6 @@
+<div class="sb {{ cell.css_classes }}" data-label="{{ cell.label }}" data-price="{{ cell.price }}">
+  {{ cell.label }}
+  {% if not cell.is_taken %}
+  <span class="sb-tooltip">{{ cell.category_name }} &middot; &euro;{{ cell.price|floatformat:0 }}</span>
+  {% endif %}
+</div>

@@ -1,0 +1,32 @@
+<div class="bmap">
+  <div class="bmap__head">
+    <div class="bmap__title">Choose your spot</div>
+    <div class="bmap__legend">
+      <div class="bmap__legend-item"><span class="bmap__dot bmap__legend-dot--free"></span> Available</div>
+      <div class="bmap__legend-item"><span class="bmap__dot bmap__legend-dot--taken"></span> Taken</div>
+      {% if show_premium_legend %}
+      <div class="bmap__legend-item"><span class="bmap__dot bmap__legend-dot--vip"></span> Premium</div>
+      {% endif %}
+      {% if show_lazy_legend %}
+      <div class="bmap__legend-item"><span class="bmap__dot bmap__legend-dot--lazy"></span> Lazy Bag</div>
+      {% endif %}
+      {% if show_cabana_legend %}
+      <div class="bmap__legend-item"><span class="bmap__dot bmap__legend-dot--cabana"></span> Cabana</div>
+      {% endif %}
+      {% if show_shade_legend %}
+      <div class="bmap__legend-item"><span class="bmap__dot bmap__legend-dot--shade"></span> Shaded</div>
+      {% endif %}
+    </div>
+  </div>
+  <div class="bmap__sea">SEA</div>
+  <div class="bmap__grid">
+    {% for row in grid_rows %}
+    <div class="bmap__seats">
+      {% for cell in row %}
+        {% include "core/partials/sunbed_cell.html" %}
+      {% endfor %}
+    </div>
+    {% endfor %}
+  </div>
+  <div class="bmap__bar">Beach bar &amp; restaurant</div>
+</div>

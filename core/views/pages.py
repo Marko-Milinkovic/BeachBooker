@@ -4,27 +4,11 @@ from django.db.models import Avg, Count, Min
 from django.shortcuts import get_object_or_404, render
 
 from core.models import BeachBar, Reservation, ReservationStatus
-
-BAR_IMAGES = {
-    "Blue Horizon Beach Club": (
-        "https://images.unsplash.com/photo-1519046904884-53103b34b206?w=500&q=80"
-    ),
-    "Aqua Paradise": (
-        "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=500&q=80"
-    ),
-}
-DEFAULT_BAR_IMAGE = (
-    "https://images.unsplash.com/photo-1540541338287-41700207dee6?w=500&q=80"
+from core.services.beach_bar import (
+    bar_image_url,
+    get_beach_bar_page_context,
+    parse_filter_date,
 )
-
-
-def _parse_explore_date(raw):
-    if not raw:
-        return date.today()
-    try:
-        return date.fromisoformat(raw)
-    except ValueError:
-        return date.today()
 
 
 def get_explore_bars(city="", filter_date=None):
@@ -53,7 +37,7 @@ def get_explore_bars(city="", filter_date=None):
             .count()
         )
         bar.free_spots = max(bar.total_spots - reserved, 0)
-        bar.image_url = BAR_IMAGES.get(bar.name, DEFAULT_BAR_IMAGE)
+        bar.image_url = bar_image_url(bar)
         result.append(bar)
     return result, filter_date
 
@@ -64,7 +48,7 @@ def index(request):
 
 def explore(request):
     city = request.GET.get("city", "").strip()
-    filter_date = _parse_explore_date(request.GET.get("date"))
+    filter_date = parse_filter_date(request.GET.get("date"))
     bars, filter_date = get_explore_bars(city, filter_date)
     return render(
         request,
@@ -82,8 +66,16 @@ def explore(request):
 
 def beach_bar(request, bar_id):
     bar = get_object_or_404(BeachBar, pk=bar_id)
-    return render(
-        request,
-        "core/beach_bar_stub.html",
-        {"active_nav": "explore", "bar": bar},
+    filter_date = parse_filter_date(request.GET.get("date"))
+    context = get_beach_bar_page_context(bar, filter_date)
+    context["active_nav"] = "explore"
+
+    category_names = {c.name for c in context["categories"]}
+    context["show_premium_legend"] = "Premium" in category_names
+    context["show_lazy_legend"] = "Lazy Bag" in category_names
+    context["show_cabana_legend"] = "Cabana" in category_names
+    context["show_shade_legend"] = bool(
+        category_names.intersection({"Lazy Bag", "Cabana"})
     )
+
+    return render(request, "core/beach_bar.html", context)
