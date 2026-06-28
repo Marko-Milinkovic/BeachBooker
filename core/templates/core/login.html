@@ -1,0 +1,30 @@
+{% extends "core/base_auth.html" %}
+
+{% block title %}Log in — BeachBooker{% endblock %}
+
+{% block content %}
+<div class="auth__card">
+  <div class="auth__logo">Beach<span>Booker</span></div>
+  <p class="auth__sub">Welcome back. Log in to manage your reservations.</p>
+
+  {% if error %}
+  <p style="color:var(--rose);font-size:.875rem;margin-bottom:16px">{{ error }}</p>
+  {% endif %}
+
+  <form class="auth__form" method="post">
+    {% csrf_token %}
+    {% if next %}<input type="hidden" name="next" value="{{ next }}">{% endif %}
+    <div class="field">
+      <label for="email">Email</label>
+      <input class="input" type="email" id="email" name="email" value="{{ email }}" placeholder="you@example.com" required>
+    </div>
+    <div class="field">
+      <label for="password">Password</label>
+      <input class="input" type="password" id="password" name="password" placeholder="********" required>
+    </div>
+    <button type="submit" class="btn btn--teal btn--lg">Log in</button>
+  </form>
+
+  <p class="auth__foot">Don&apos;t have an account? <a href="{% url 'register' %}{% if next %}?next={{ next|urlencode }}{% endif %}">Sign up</a></p>
+</div>
+{% endblock %}

@@ -1,9 +1,10 @@
 from datetime import date
 
+from django.contrib.auth.decorators import login_required
 from django.db.models import Avg, Count, Min
 from django.shortcuts import get_object_or_404, render
 
-from core.models import BeachBar, Reservation, ReservationStatus
+from core.models import BeachBar, Reservation, ReservationStatus, UserRole
 from core.services.beach_bar import (
     bar_image_url,
     get_beach_bar_page_context,
@@ -79,3 +80,15 @@ def beach_bar(request, bar_id):
     )
 
     return render(request, "core/beach_bar.html", context)
+
+
+@login_required
+def my_reservations(request):
+    return render(request, "core/my_reservations_stub.html", {"active_nav": "bookings"})
+
+
+@login_required
+def owner_dashboard(request):
+    if request.user.role != UserRole.OWNER:
+        return render(request, "core/my_reservations_stub.html", {"active_nav": "bookings"})
+    return render(request, "core/owner_dashboard_stub.html", {"active_nav": "owner"})

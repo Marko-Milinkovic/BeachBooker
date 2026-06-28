@@ -1,4 +1,4 @@
-<a href="{% url 'beach_bar' bar.id %}" class="card">
+<a href="{% url 'beach_bar' bar.id %}?date={{ filter_date|date:'Y-m-d' }}" class="card">
   <div class="card__img">
     <img src="{{ bar.image_url }}" alt="{{ bar.name }}">
     <div class="card__img-gradient"></div>

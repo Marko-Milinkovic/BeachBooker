@@ -75,6 +75,14 @@ venv\bin\python manage.py seed_demo
 
 Creates sample users (`owner@beachbooker.test`, `guest@beachbooker.test`, `admin@beachbooker.test` / password `demo1234`), two beach bars, sunbeds, and sample reservations. Safe to run more than once.
 
+**Demo login**
+
+- Guest: `guest@beachbooker.test` / `demo1234` — browse, select spots, My Bookings
+- Owner: `owner@beachbooker.test` / `demo1234` — owner dashboard stub
+- Admin: `admin@beachbooker.test` / `demo1234` — Django admin at `/admin/`
+
+Auth uses Django sessions (cookie-based). Register at `/register/` or log in at `/login/`.
+
 **Do not commit `.env`** — only `.env.example` (placeholders).
 
 ### After `git pull` (already set up locally)

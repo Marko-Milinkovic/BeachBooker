@@ -65,7 +65,9 @@
        data-bar-id="{{ bar.id }}"
        data-api-url="{% url 'api_bar_sunbeds' bar.id %}"
        data-initial-date="{{ filter_date|date:'Y-m-d' }}"
-       data-today="{{ today|date:'Y-m-d' }}">
+       data-today="{{ today|date:'Y-m-d' }}"
+       data-is-authenticated="{{ user.is_authenticated|yesno:'true,false' }}"
+       data-login-url="{% url 'login' %}">
     <div class="date-strip" id="date-strip">
       {% for pick in date_quick_picks %}
       <a href="{% url 'beach_bar' bar.id %}?date={{ pick.date|date:'Y-m-d' }}"
@@ -114,7 +116,7 @@
         </div>
 
         <button type="button" class="btn btn--teal btn--lg" id="reserve-btn" disabled>Book now</button>
-        <p class="bpanel__hint">Select spots to preview total — booking comes in the next slice</p>
+        <p class="bpanel__hint" id="reserve-hint">{% if user.is_authenticated %}Select spots to preview total — booking comes in the next slice{% else %}Select spots, then log in to book{% endif %}</p>
       </aside>
     </div>
 

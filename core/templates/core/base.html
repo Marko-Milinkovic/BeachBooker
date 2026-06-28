@@ -9,7 +9,11 @@
   {% block extra_head %}{% endblock %}
 </head>
 <body>
-  {% include "core/partials/nav_guest.html" %}
+  {% if user.is_authenticated %}
+    {% include "core/partials/nav_user.html" %}
+  {% else %}
+    {% include "core/partials/nav_guest.html" %}
+  {% endif %}
   {% block content %}{% endblock %}
   {% include "core/partials/footer_full.html" %}
   {% block extra_js %}{% endblock %}

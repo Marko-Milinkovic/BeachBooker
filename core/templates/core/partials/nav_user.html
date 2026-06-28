@@ -1,0 +1,15 @@
+<nav class="nav"><div class="nav__inner">
+  <a href="{% url 'index' %}" class="nav__logo">Beach<span>Booker</span></a>
+  <div class="nav__links">
+    <a href="{% url 'index' %}"{% if active_nav == 'home' %} class="active"{% endif %}>Home</a>
+    <a href="{% url 'explore' %}"{% if active_nav == 'explore' %} class="active"{% endif %}>Explore</a>
+    <a href="{% url 'my_reservations' %}"{% if active_nav == 'bookings' %} class="active"{% endif %}>My Bookings</a>
+    {% if user.role == 'owner' %}
+    <a href="{% url 'owner_dashboard' %}"{% if active_nav == 'owner' %} class="active"{% endif %}>For Owners</a>
+    {% endif %}
+  </div>
+  <div class="nav__right">
+    <span style="font-size:.875rem;color:var(--text-2);margin-right:8px">{{ user.first_name }}</span>
+    <a href="{% url 'logout' %}" class="btn btn--ghost btn--pill">Log out</a>
+  </div>
+</div></nav>

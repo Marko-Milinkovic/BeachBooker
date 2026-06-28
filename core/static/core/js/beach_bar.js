@@ -5,6 +5,8 @@
   const apiUrl = root.dataset.apiUrl;
   const todayIso = root.dataset.today;
   let currentDate = root.dataset.initialDate;
+  const isAuthenticated = root.dataset.isAuthenticated === "true";
+  const loginUrl = root.dataset.loginUrl;
   const selected = new Map();
 
   const gridEl = document.getElementById("sunbed-grid");
@@ -171,6 +173,15 @@
       if (dateInput.value) changeDate(dateInput.value);
     });
   }
+
+  reserveBtn.addEventListener("click", () => {
+    if (selected.size === 0) return;
+    if (!isAuthenticated) {
+      const next = encodeURIComponent(window.location.pathname + window.location.search);
+      window.location.href = `${loginUrl}?next=${next}`;
+      return;
+    }
+  });
 
   bindSpotClicks();
   updateSummary();
