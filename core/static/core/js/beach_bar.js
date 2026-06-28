@@ -7,6 +7,8 @@
   let currentDate = root.dataset.initialDate;
   const isAuthenticated = root.dataset.isAuthenticated === "true";
   const loginUrl = root.dataset.loginUrl;
+  const bookUrl = root.dataset.bookUrl;
+  const bookingsUrl = root.dataset.bookingsUrl;
   const selected = new Map();
 
   const gridEl = document.getElementById("sunbed-grid");
@@ -60,6 +62,11 @@
       el.classList.remove("sb--pick");
       el.classList.add("sb--free");
     });
+  }
+
+  function getCookie(name) {
+    const match = document.cookie.match(new RegExp(`(^| )${name}=([^;]+)`));
+    return match ? decodeURIComponent(match[2]) : "";
   }
 
   function updateSummary() {
@@ -174,12 +181,42 @@
     });
   }
 
-  reserveBtn.addEventListener("click", () => {
+  reserveBtn.addEventListener("click", async () => {
     if (selected.size === 0) return;
     if (!isAuthenticated) {
       const next = encodeURIComponent(window.location.pathname + window.location.search);
       window.location.href = `${loginUrl}?next=${next}`;
       return;
+    }
+
+    reserveBtn.disabled = true;
+    reserveBtn.textContent = "Booking…";
+    try {
+      const response = await fetch(bookUrl, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "X-CSRFToken": getCookie("csrftoken"),
+        },
+        body: JSON.stringify({
+          date: currentDate,
+          sunbed_ids: [...selected.keys()],
+        }),
+      });
+      const data = await response.json();
+      if (!response.ok) {
+        alert(data.error || "Booking failed. Please try again.");
+        await loadMap(currentDate);
+        clearSelection();
+        return;
+      }
+      window.location.href = bookingsUrl;
+    } catch (error) {
+      console.error(error);
+      alert("Booking failed. Please try again.");
+    } finally {
+      reserveBtn.textContent = "Book now";
+      updateSummary();
     }
   });
 

@@ -77,11 +77,24 @@ Creates sample users (`owner@beachbooker.test`, `guest@beachbooker.test`, `admin
 
 **Demo login**
 
-- Guest: `guest@beachbooker.test` / `demo1234` — browse, select spots, My Bookings
+- Guest: `guest@beachbooker.test` / `demo1234` — browse, book spots, view/cancel on My Bookings
 - Owner: `owner@beachbooker.test` / `demo1234` — owner dashboard stub
 - Admin: `admin@beachbooker.test` / `demo1234` — Django admin at `/admin/`
 
 Auth uses Django sessions (cookie-based). Register at `/register/` or log in at `/login/`.
+
+**Booking flow (logged-in guest)**
+
+1. Open a beach bar from Explore, pick a date, tap free spots on the map.
+2. Click **Book now** — creates active reservations in the database.
+3. **My Bookings** lists active, past (completed), and cancelled reservations.
+4. Cancel an active booking from My Bookings; the spot becomes free on the map again.
+
+**Run tests**
+
+```bash
+venv\bin\python manage.py test core
+```
 
 **Do not commit `.env`** — only `.env.example` (placeholders).
 

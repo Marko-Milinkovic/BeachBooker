@@ -2,7 +2,7 @@ from datetime import date
 
 from django.contrib.auth.decorators import login_required
 from django.db.models import Avg, Count, Min
-from django.shortcuts import get_object_or_404, render
+from django.shortcuts import get_object_or_404, redirect, render
 
 from core.models import BeachBar, Reservation, ReservationStatus, UserRole
 from core.services.beach_bar import (
@@ -10,6 +10,7 @@ from core.services.beach_bar import (
     get_beach_bar_page_context,
     parse_filter_date,
 )
+from core.services.reservations import mark_past_reservations_completed
 
 
 def get_explore_bars(city="", filter_date=None):
@@ -84,11 +85,36 @@ def beach_bar(request, bar_id):
 
 @login_required
 def my_reservations(request):
-    return render(request, "core/my_reservations_stub.html", {"active_nav": "bookings"})
+    mark_past_reservations_completed(user=request.user)
+    reservations = (
+        Reservation.objects.filter(user=request.user)
+        .select_related("sunbed", "sunbed__beach_bar", "sunbed__category")
+        .order_by("-reservation_date", "-created_at")
+    )
+    today = date.today()
+    return render(
+        request,
+        "core/my_reservations.html",
+        {
+            "active_nav": "bookings",
+            "active_reservations": [
+                r
+                for r in reservations
+                if r.status == ReservationStatus.ACTIVE
+                and r.reservation_date >= today
+            ],
+            "past_reservations": [
+                r for r in reservations if r.status == ReservationStatus.COMPLETED
+            ],
+            "cancelled_reservations": [
+                r for r in reservations if r.status == ReservationStatus.CANCELLED
+            ],
+        },
+    )
 
 
 @login_required
 def owner_dashboard(request):
     if request.user.role != UserRole.OWNER:
-        return render(request, "core/my_reservations_stub.html", {"active_nav": "bookings"})
+        return redirect("explore")
     return render(request, "core/owner_dashboard_stub.html", {"active_nav": "owner"})

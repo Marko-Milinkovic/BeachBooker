@@ -1,0 +1,49 @@
+{% extends "core/base.html" %}
+{% load static %}
+
+{% block title %}My Bookings — BeachBooker{% endblock %}
+
+{% block content %}
+<header class="ph"><div class="container">
+  <h1 class="ph__title">My Bookings</h1>
+  <p class="ph__sub">View and manage all your beach bookings.</p>
+</div></header>
+
+<main class="section section--alt" style="padding-top:40px;padding-bottom:80px;min-height:calc(100vh - var(--nav-h) - 140px)">
+  <div class="container">
+    <div class="tabs">
+      <button type="button" class="tab on" data-tab="active">Active</button>
+      <button type="button" class="tab" data-tab="past">Past</button>
+      <button type="button" class="tab" data-tab="cancelled">Cancelled</button>
+    </div>
+
+    <div id="tab-active" class="res-tab" style="display:flex;flex-direction:column;gap:16px">
+      {% for reservation in active_reservations %}
+        {% include "core/partials/reservation_card.html" %}
+      {% empty %}
+        <p style="color:var(--text-2);text-align:center;padding:48px 0">No active bookings. <a href="{% url 'explore' %}" style="color:var(--teal)">Explore beaches</a></p>
+      {% endfor %}
+    </div>
+
+    <div id="tab-past" class="res-tab" style="display:none;flex-direction:column;gap:16px">
+      {% for reservation in past_reservations %}
+        {% include "core/partials/reservation_card.html" with show_cancel=False %}
+      {% empty %}
+        <p style="color:var(--text-2);text-align:center;padding:48px 0">No past bookings yet.</p>
+      {% endfor %}
+    </div>
+
+    <div id="tab-cancelled" class="res-tab" style="display:none;flex-direction:column;gap:16px">
+      {% for reservation in cancelled_reservations %}
+        {% include "core/partials/reservation_card.html" with show_cancel=False card_muted=True %}
+      {% empty %}
+        <p style="color:var(--text-2);text-align:center;padding:48px 0">No cancelled bookings.</p>
+      {% endfor %}
+    </div>
+  </div>
+</main>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'core/js/reservations.js' %}"></script>
+{% endblock %}
