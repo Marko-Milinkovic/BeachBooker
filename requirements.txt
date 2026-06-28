@@ -1,15 +1,23 @@
 # BeachBooker — Python dependencies
 #
-# After clone (from repo root):
+# Full setup (clone, MySQL, migrations, runserver): see README.md
+#
+# Quick start after clone:
 #   python -m venv venv
-#   venv\Scripts\activate          # Windows
-#   source venv/bin/activate       # macOS / Linux
+#   venv\Scripts\activate          # Windows (standard Python)
+#   venv\bin\activate              # Windows (MSYS) / macOS / Linux
 #   pip install -r requirements.txt
-#   copy .env.example .env         # then set DB_PASSWORD, etc.
+#   copy .env.example .env         # set DB_PASSWORD, DB_PORT, etc.
+#   # Import database/schema.sql in MySQL Workbench, then:
+#   python manage.py migrate --fake-initial
 #   python manage.py runserver
 #
-# MySQL: import database/schema.sql in Workbench (or use migrations) before first run.
-# Windows: if mysqlclient install fails, pip installs PyMySQL automatically (see markers below).
+# After git pull (existing setup):
+#   git pull
+#   pip install -r requirements.txt
+#   python manage.py migrate
+#
+# Windows: if mysqlclient install fails, pip installs PyMySQL automatically.
 
 Django>=4.2,<6
 python-dotenv>=1.0,<2
