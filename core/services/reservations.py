@@ -78,12 +78,14 @@ def book_sunbeds(user, beach_bar, reservation_date, sunbed_ids):
 def cancel_reservation(user, reservation_id):
     try:
         reservation = Reservation.objects.select_related(
-            "sunbed", "sunbed__beach_bar"
+            "sunbed", "sunbed__beach_bar", "sunbed__beach_bar__owner"
         ).get(pk=reservation_id)
     except Reservation.DoesNotExist:
         raise BookingError("Reservation not found.", "not_found")
 
-    if reservation.user_id != user.id:
+    is_guest = reservation.user_id == user.id
+    is_bar_owner = reservation.sunbed.beach_bar.owner_id == user.id
+    if not (is_guest or is_bar_owner):
         raise BookingError("You cannot cancel this reservation.", "forbidden")
 
     if reservation.status != ReservationStatus.ACTIVE:

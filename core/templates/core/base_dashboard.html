@@ -1,0 +1,21 @@
+{% extends "core/base.html" %}
+{% load static %}
+
+{% block title %}Owner Dashboard — BeachBooker{% endblock %}
+
+{% block extra_head %}
+<link rel="stylesheet" href="{% static 'core/css/dashboard.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="dash">
+  {% include "core/partials/owner_sidebar.html" %}
+  <main class="dash__main">
+    {% block dashboard_content %}{% endblock %}
+  </main>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'core/js/dashboard.js' %}"></script>
+{% endblock %}

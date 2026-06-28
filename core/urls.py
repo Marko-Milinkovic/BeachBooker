@@ -1,6 +1,6 @@
 from django.urls import path
 
-from core.views import api, auth, pages
+from core.views import api, auth, owner, pages
 
 urlpatterns = [
     path("", pages.index, name="index"),
@@ -17,5 +17,5 @@ urlpatterns = [
     path("register/", auth.register_page, name="register"),
     path("logout/", auth.logout_page, name="logout"),
     path("my-reservations/", pages.my_reservations, name="my_reservations"),
-    path("owner/", pages.owner_dashboard, name="owner_dashboard"),
+    path("owner/", owner.dashboard, name="owner_dashboard"),
 ]

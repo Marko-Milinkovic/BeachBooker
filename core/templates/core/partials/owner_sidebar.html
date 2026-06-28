@@ -1,0 +1,9 @@
+<aside class="side">
+  <div class="side__label">Dashboard</div>
+  <a href="{% url 'owner_dashboard' %}?tab=overview&date={{ filter_date|date:'Y-m-d' }}"
+     class="side__link{% if active_tab == 'overview' %} on{% endif %}"
+     data-tab="overview">Overview</a>
+  <a href="{% url 'owner_dashboard' %}?tab=reservations&date={{ filter_date|date:'Y-m-d' }}"
+     class="side__link{% if active_tab == 'reservations' %} on{% endif %}"
+     data-tab="reservations">Reservations</a>
+</aside>

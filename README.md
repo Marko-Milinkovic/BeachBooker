@@ -78,7 +78,7 @@ Creates sample users (`owner@beachbooker.test`, `guest@beachbooker.test`, `admin
 **Demo login**
 
 - Guest: `guest@beachbooker.test` / `demo1234` — browse, book spots, view/cancel on My Bookings
-- Owner: `owner@beachbooker.test` / `demo1234` — owner dashboard stub
+- Owner: `owner@beachbooker.test` / `demo1234` — owner dashboard (overview, reservations, cancel guest bookings)
 - Admin: `admin@beachbooker.test` / `demo1234` — Django admin at `/admin/`
 
 Auth uses Django sessions (cookie-based). Register at `/register/` or log in at `/login/`.
@@ -89,6 +89,13 @@ Auth uses Django sessions (cookie-based). Register at `/register/` or log in at 
 2. Click **Book now** — creates active reservations in the database.
 3. **My Bookings** lists active, past (completed), and cancelled reservations.
 4. Cancel an active booking from My Bookings; the spot becomes free on the map again.
+
+**Owner dashboard (logged-in owner)**
+
+1. Log in as owner and open **For Owners** (`/owner/`).
+2. **Overview** — bookings, revenue, occupancy, and zone fill for a selected date.
+3. **Reservations** — all guest bookings for your bar; filter by date and status.
+4. **Cancel** an active guest booking; the spot becomes free on the guest map.
 
 **Run tests**
 

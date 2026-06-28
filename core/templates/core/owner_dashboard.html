@@ -1,0 +1,119 @@
+{% extends "core/base_dashboard.html" %}
+
+{% block dashboard_content %}
+<section id="tab-overview" class="dash-panel"{% if active_tab != 'overview' %} style="display:none"{% endif %}>
+  <div class="dash__head dash__head--split">
+    <h1 class="dash__title">{{ bar.name }}</h1>
+    <form method="get" class="dash-date-form">
+      <input type="hidden" name="tab" value="overview">
+      <label for="overview-date" class="sr-only">Date</label>
+      <input type="date" id="overview-date" name="date" class="input" value="{{ filter_date|date:'Y-m-d' }}">
+      <button type="submit" class="btn btn--outline btn--sm btn--pill">Apply</button>
+    </form>
+  </div>
+
+  <div class="stats">
+    <div class="stat">
+      <div class="stat__label">Bookings</div>
+      <div class="stat__value">{{ overview.bookings_count }}</div>
+    </div>
+    <div class="stat">
+      <div class="stat__label">Revenue</div>
+      <div class="stat__value">&euro;{{ overview.revenue|floatformat:0 }}</div>
+    </div>
+    <div class="stat">
+      <div class="stat__label">Occupancy</div>
+      <div class="stat__value">{{ overview.occupancy_pct }}%</div>
+    </div>
+    <div class="stat">
+      <div class="stat__label">Free spots</div>
+      <div class="stat__value">{{ overview.free_spots }}</div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2 class="card__title">Beach status — {{ filter_date|date:"M j, Y" }}</h2>
+    <p class="dash-status-line">
+      <strong>{{ overview.taken_spots }}</strong> of <strong>{{ overview.total_spots }}</strong> spots booked
+    </p>
+    {% if overview.category_stats %}
+    <div class="zone-stats">
+      {% for zone in overview.category_stats %}
+      <div class="zone-stat">
+        <div class="zone-stat__head">
+          <span>{{ zone.name }}</span>
+          <span>{{ zone.taken }} / {{ zone.total }}</span>
+        </div>
+        <div class="prog"><div class="prog__bar" style="width:{{ zone.pct }}%"></div></div>
+      </div>
+      {% endfor %}
+    </div>
+    {% endif %}
+  </div>
+</section>
+
+<section id="tab-reservations" class="dash-panel"{% if active_tab != 'reservations' %} style="display:none"{% endif %}>
+  <div class="dash__head">
+    <h1 class="dash__title">All Reservations</h1>
+  </div>
+
+  <form method="get" class="toolbar">
+    <input type="hidden" name="tab" value="reservations">
+    <input type="date" name="date" class="input" value="{{ filter_date|date:'Y-m-d' }}" aria-label="Filter by date">
+    <select name="status" class="input input--select" aria-label="Status filter">
+      <option value=""{% if not status_filter %} selected{% endif %}>All statuses</option>
+      <option value="active"{% if status_filter == 'active' %} selected{% endif %}>Active</option>
+      <option value="completed"{% if status_filter == 'completed' %} selected{% endif %}>Completed</option>
+      <option value="cancelled"{% if status_filter == 'cancelled' %} selected{% endif %}>Cancelled</option>
+    </select>
+    <button type="submit" class="btn btn--teal btn--sm btn--pill">Filter</button>
+  </form>
+
+  <div class="tbl-wrap">
+    <table class="tbl">
+      <thead>
+        <tr>
+          <th>Guest</th>
+          <th>Spot</th>
+          <th>Category</th>
+          <th>Date</th>
+          <th>Total</th>
+          <th>Status</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for reservation in reservations %}
+        <tr>
+          <td>{{ reservation.user.first_name }} {{ reservation.user.last_name }}<br><small>{{ reservation.user.email }}</small></td>
+          <td>{{ reservation.sunbed.label }}</td>
+          <td>{{ reservation.sunbed.category.name }}</td>
+          <td>{{ reservation.reservation_date|date:"M j, Y" }}</td>
+          <td>&euro;{{ reservation.price_at_booking|floatformat:0 }}</td>
+          <td>
+            {% if reservation.status == 'active' %}
+            <span class="badge badge--ok">Active</span>
+            {% elif reservation.status == 'completed' %}
+            <span class="badge badge--done">Completed</span>
+            {% else %}
+            <span class="badge badge--no">Cancelled</span>
+            {% endif %}
+          </td>
+          <td>
+            {% if reservation.status == 'active' %}
+            <button type="button"
+                    class="btn btn--danger btn--sm owner-cancel-reservation"
+                    data-reservation-id="{{ reservation.id }}">Cancel</button>
+            {% endif %}
+          </td>
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="7" class="tbl__empty">No reservations match your filters.</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+{% endblock %}
