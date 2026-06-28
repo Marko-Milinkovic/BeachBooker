@@ -43,10 +43,13 @@ After `schema.sql` is imported:
 
 ```bash
 venv\bin\python manage.py migrate --fake-initial
+venv\bin\python manage.py migrate
 ```
 
-- Creates Django’s own tables (`django_migrations`, sessions, etc.).
-- Marks `core.0001_initial` as applied **without** running `CREATE TABLE` again.
+- `--fake-initial` marks `core.0001_initial` as applied **without** recreating tables from `schema.sql`.
+- A normal `migrate` afterwards applies any later migrations (e.g. `core.0002` adds `user.last_login` if your DB was created from an older `schema.sql`).
+
+**`user.last_login` column:** Django’s `core.User` needs a nullable `last_login` field. The current `database/schema.sql` includes it. If you imported an **older** SQL file without that column, `python manage.py migrate` adds it automatically — you do **not** need to re-import `schema.sql`.
 
 If you skip `schema.sql` and use an empty database instead, run:
 
@@ -68,14 +71,18 @@ Open `http://127.0.0.1:8000/`.
 
 ### After `git pull` (already set up locally)
 
+**Always run this after pulling** — especially when `core/migrations/` has new files:
+
 ```bash
 git pull
 venv\bin\python -m pip install -r requirements.txt   # if requirements.txt changed
-venv\bin\python manage.py migrate                    # apply any new migrations
+venv\bin\python manage.py migrate                      # apply new migrations
 venv\bin\python manage.py runserver
 ```
 
-If a new clone already has BeachBooker tables from `schema.sql` but migrations were never applied, use `migrate --fake-initial` once (see first-time setup above), not plain `migrate`.
+You do **not** need to re-import `database/schema.sql` for routine updates. Migrations patch the existing database (for example `core.0002_user_last_login_column` adds `user.last_login` when missing).
+
+If a new clone already has BeachBooker tables from `schema.sql` but migrations were never applied, use `migrate --fake-initial` once, then `migrate` (see first-time setup above).
 
 ## Viewing the static prototype
 

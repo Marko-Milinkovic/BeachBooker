@@ -25,6 +25,7 @@ CREATE TABLE user (
     id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
     email VARCHAR(255) NOT NULL,
     password_hash VARCHAR(255) NOT NULL,
+    last_login DATETIME NULL,
     first_name VARCHAR(80) NOT NULL,
     last_name VARCHAR(80) NOT NULL,
     role ENUM('registered', 'owner', 'admin') NOT NULL DEFAULT 'registered',
