@@ -1,0 +1,60 @@
+beach_booker/
+│
+├── manage.py                 # Django CLI (runserver, migrate, createsuperuser), entry point: runserver
+├── requirements.txt          # Python deps (move from specs/ when you scaffold)
+├── .env.example              # DB URL, secret key placeholders (no real secrets)
+│   
+|   # the Django project wrapper around app [project wiring]
+├── beachbooker/              # Project config package (not business logic)
+│   ├── settings.py           # DB, apps, static, templates, auth
+│   ├── urls.py               # Root URL → includes core.urls + /admin/
+│   ├── wsgi.py / asgi.py     # Server entry for deployment
+│   └── __init__.py
+│
+|   # the app (M+V+T) [what BeachBooker actually does]
+├── core/                     # Single Django app — all BeachBooker logic
+│   ├── models.py             # M in MVT — ORM ↔ MySQL tables
+│   ├── admin.py              # Django Admin registration
+│   ├── urls.py               # App routes → views
+│   │
+│   ├── views/                # V in MVT — request handlers (not HTML files)
+│   │   ├── pages.py          # SSR pages: index, explore, login, register, …
+│   │   ├── api.py            # JSON endpoints for AJAX (map, book, cancel)
+│   │   └── owner.py          # Owner dashboard pages + owner-only routes
+│   │
+│   ├── services/
+│   │   └── reservations.py   # Booking rules (free slot, price snapshot, cancel)
+│   │
+│   ├── templates/core/       # T in MVT — HTML rendered by views
+│   │   ├── base.html
+│   │   ├── base_auth.html
+│   │   ├── base_dashboard.html
+│   │   ├── index.html
+│   │   ├── explore.html
+│   │   ├── beach_bar.html
+│   │   ├── login.html
+│   │   ├── register.html
+│   │   ├── my_reservations.html
+│   │   ├── owner_dashboard.html
+│   │   └── partials/         # nav, cards, sidebar, footers
+│   │
+│   └── static/core/
+│       ├── css/styles.css
+│       ├── js/               # explore, beach_bar, auth, reservations, dashboard
+│       └── images/
+│
+├── database/                 # Design artifacts (schema.sql) — not loaded at runtime
+├── html_pages/               # Static prototype — reference when building templates
+└── initial_phases/           # SRS, SSU, specs — coursework docs
+
+
+--------------------------------------------------------------------------------------
+
+
+Browser GET /explore/
+  → beachbooker/urls.py
+  → core/urls.py
+  → views/pages.py (explore view)
+  → models.py (query bars)
+  → explore.html (render)
+  → HTML response

@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="sr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>BeachBooker — Specifikacija baze podataka</title>
+  <style>
+    @page { margin: 2cm; }
+    body { font-family: "Segoe UI", Calibri, Arial, sans-serif; font-size: 11pt; line-height: 1.45; color: #1a1a1a; max-width: 210mm; margin: 0 auto; padding: 24px; }
+    h1 { font-size: 18pt; border-bottom: 2px solid #0d9488; padding-bottom: 8px; margin-top: 32px; }
+    h2 { font-size: 14pt; color: #0f766e; margin-top: 28px; }
+    h3 { font-size: 12pt; margin-top: 20px; }
+    .cover { text-align: center; margin: 48px 0 64px; page-break-after: always; }
+    .cover h1 { border: none; font-size: 22pt; }
+    .cover .meta { font-size: 12pt; color: #444; margin-top: 24px; }
+    table { width: 100%; border-collapse: collapse; margin: 12px 0 20px; font-size: 10pt; }
+    th, td { border: 1px solid #ccc; padding: 6px 8px; text-align: left; }
+    th { background: #f0fdfa; font-weight: 600; }
+    pre { background: #f8fafc; border: 1px solid #e2e8f0; padding: 12px; font-size: 9pt; overflow-x: auto; white-space: pre-wrap; }
+    .diagram { text-align: center; margin: 24px 0; page-break-inside: avoid; }
+    .diagram img { max-width: 100%; height: auto; border: 1px solid #e2e8f0; }
+    .diagram figcaption { font-size: 10pt; color: #64748b; margin-top: 8px; }
+    .toc { margin: 24px 0; }
+    .toc li { margin: 4px 0; }
+    @media print { body { padding: 0; } h2 { page-break-after: avoid; } }
+  </style>
+</head>
+<body>
+
+<div class="cover">
+  <p>Elektrotehnički fakultet u Beogradu</p>
+  <h1>Specifikacija baze podataka</h1>
+  <p><strong>Projekat:</strong> BeachBooker</p>
+  <p><strong>Predmet:</strong> Principi softverskog inženjerstva (SI3PSI)</p>
+  <p><strong>Tim:</strong> Tropski bar</p>
+  <div class="meta">
+    <p>Verzija 1.0 · 21. maj 2026.</p>
+  </div>
+</div>
+
+<h2>Istorija revizija</h2>
+<table>
+  <tr><th>Revizija</th><th>Datum</th><th>Autor</th><th>Opis</th></tr>
+  <tr><td>1.0</td><td>21.05.2026.</td><td>Tim Tropski bar</td><td>Inicijalna verzija</td></tr>
+</table>
+
+<h2>Sadržaj</h2>
+<ol class="toc">
+  <li>Uvod (namena, ciljne grupe, organizacija, rečnik, otvorena pitanja)</li>
+  <li>Model podataka (ER, IE dijagram, relacione šeme)</li>
+  <li>Tabele (10 tabela)</li>
+  <li>Prilog — SQL skripta</li>
+</ol>
+
+<h1>1. Uvod</h1>
+
+<h3>1.1 Namena</h3>
+<p>Baza podataka za <strong>BeachBooker</strong> centralizuje podatke o korisnicima, beach barovima, ležaljkama, rezervacijama i pratećim entitetima. Backend je <strong>Django</strong>; klijent koristi <strong>HTML</strong> i <strong>AJAX</strong> za dinamičke mape i rezervacije. Dokument sadrži ER prikaz, IE dijagram, relacione šeme i katalog tabela — osnova za implementaciju i odbranu projekta.</p>
+<p><strong>DBMS:</strong> MySQL 8+ · <strong>Šema:</strong> <code>beachbooker</code></p>
+
+<h3>1.2 Ciljne grupe</h3>
+<p>Vođa tima, projektant baze, backend razvoj i ostali članovi tima — za usklađivanje imena polja, integraciju i održavanje modela.</p>
+
+<h3>1.3 Organizacija dokumenta</h3>
+<p>Poglavlje 2 — modeli; poglavlje 3 — tabele; prilog — SQL skripte u repozitorijumu (<code>schema.sql</code>).</p>
+
+<h3>1.4 Rečnik pojmova</h3>
+<table>
+  <tr><th>Pojam</th><th>Značenje</th></tr>
+  <tr><td>ER / IE</td><td>Entity–Relationship / Information Engineering notacija</td></tr>
+  <tr><td>PK / FK</td><td>Primarni / strani ključ</td></tr>
+  <tr><td>Gost</td><td>Neregistrovani posetilac — nema reda u bazi</td></tr>
+  <tr><td>Dostupnost</td><td>Izvedeno iz rezervacija, nema posebne tabele</td></tr>
+</table>
+
+<h3>1.5 Otvorena pitanja</h3>
+<table>
+  <tr><th>Br.</th><th>Problem</th><th>Rešenje</th></tr>
+  <tr><td>1</td><td>Više barova po vlasniku?</td><td>Da u šemi (1,n); MVP UI može ograničiti na jedan.</td></tr>
+  <tr><td>2</td><td>Bundle / review u MVP UI?</td><td>Tabele postoje; UI kasnije.</td></tr>
+</table>
+
+<h1>2. Model podataka</h1>
+
+<h3>2.1 Dijagram ER notacije</h3>
+<pre>USER (1,n) BEACH_BAR · USER (1,n) RESERVATION · USER (1,n) REVIEW
+BEACH_BAR (1,n) SUNBED_CATEGORY · (1,n) SUNBED · (1,n) BUNDLE
+BEACH_BAR (n,m) AMENITY preko BEACH_BAR_AMENITY
+SUNBED (1,n) RESERVATION · RESERVATION (n,m) BUNDLE preko RESERVATION_BUNDLE
+Jedinstveno: (beach_bar_id, label) na SUNBED; (sunbed_id, reservation_date) na RESERVATION</pre>
+
+<h3>2.2 Dijagram IE notacije</h3>
+<figure class="diagram">
+  <img src="beach_booker_ie.png" alt="IE/EER dijagram — BeachBooker">
+  <figcaption>Slika 1. Logički model baze podataka (MySQL Workbench). Izvor: beach_booker_ie.png, model: beachbooker_EER_model.mwb</figcaption>
+</figure>
+
+<h3>2.3 Šema relacione baze podataka</h3>
+<pre>user (id, email, password_hash, first_name, last_name, role, created_at)
+beach_bar (id, owner_id, name, address, city, description, opening_time, closing_time, map_url, created_at)
+amenity (id, name)
+beach_bar_amenity (beach_bar_id, amenity_id)
+sunbed_category (id, beach_bar_id, name, price, description)
+sunbed (id, beach_bar_id, category_id, label, grid_row, grid_col)
+reservation (id, user_id, sunbed_id, reservation_date, status, price_at_booking, payment_status, created_at)
+bundle (id, beach_bar_id, name, description, price, is_active)
+reservation_bundle (reservation_id, bundle_id, price_at_booking)
+review (id, user_id, beach_bar_id, rating, review_text, created_at)</pre>
+
+<h1>3. Tabele</h1>
+
+<h3>3.1 user</h3>
+<p>Nalozi: registrovani korisnik, vlasnik, administrator. Lozinka: <code>password_hash</code>.</p>
+<table>
+  <tr><th>Name</th><th>Datatype</th><th>PK</th><th>FK</th><th>Napomene</th></tr>
+  <tr><td>id</td><td>BIGINT UNSIGNED</td><td>Yes</td><td>No</td><td>AUTO_INCREMENT</td></tr>
+  <tr><td>email</td><td>VARCHAR(255)</td><td>No</td><td>No</td><td>UNIQUE, NOT NULL</td></tr>
+  <tr><td>password_hash</td><td>VARCHAR(255)</td><td>No</td><td>No</td><td>NOT NULL</td></tr>
+  <tr><td>first_name</td><td>VARCHAR(80)</td><td>No</td><td>No</td><td>NOT NULL</td></tr>
+  <tr><td>last_name</td><td>VARCHAR(80)</td><td>No</td><td>No</td><td>NOT NULL</td></tr>
+  <tr><td>role</td><td>ENUM</td><td>No</td><td>No</td><td>registered | owner | admin</td></tr>
+  <tr><td>created_at</td><td>DATETIME</td><td>No</td><td>No</td><td>DEFAULT CURRENT_TIMESTAMP</td></tr>
+</table>
+
+<h3>3.2 beach_bar</h3>
+<table>
+  <tr><th>Name</th><th>Datatype</th><th>PK</th><th>FK</th><th>Napomene</th></tr>
+  <tr><td>id</td><td>BIGINT UNSIGNED</td><td>Yes</td><td>No</td><td>AUTO_INCREMENT</td></tr>
+  <tr><td>owner_id</td><td>BIGINT UNSIGNED</td><td>No</td><td>user.id</td><td>NOT NULL</td></tr>
+  <tr><td>name</td><td>VARCHAR(120)</td><td>No</td><td>No</td><td>NOT NULL</td></tr>
+  <tr><td>address</td><td>VARCHAR(255)</td><td>No</td><td>No</td><td>NOT NULL</td></tr>
+  <tr><td>city</td><td>VARCHAR(80)</td><td>No</td><td>No</td><td>NOT NULL</td></tr>
+  <tr><td>description</td><td>TEXT</td><td>No</td><td>No</td><td>NULL</td></tr>
+  <tr><td>opening_time</td><td>TIME</td><td>No</td><td>No</td><td>NOT NULL</td></tr>
+  <tr><td>closing_time</td><td>TIME</td><td>No</td><td>No</td><td>NOT NULL</td></tr>
+  <tr><td>map_url</td><td>VARCHAR(512)</td><td>No</td><td>No</td><td>NULL</td></tr>
+  <tr><td>created_at</td><td>DATETIME</td><td>No</td><td>No</td><td></td></tr>
+</table>
+
+<h3>3.3 amenity</h3>
+<table>
+  <tr><th>Name</th><th>Datatype</th><th>PK</th><th>FK</th><th>Napomene</th></tr>
+  <tr><td>id</td><td>BIGINT UNSIGNED</td><td>Yes</td><td>No</td><td>AUTO_INCREMENT</td></tr>
+  <tr><td>name</td><td>VARCHAR(80)</td><td>No</td><td>No</td><td>UNIQUE, NOT NULL</td></tr>
+</table>
+
+<h3>3.4 beach_bar_amenity</h3>
+<table>
+  <tr><th>Name</th><th>Datatype</th><th>PK</th><th>FK</th><th>Napomene</th></tr>
+  <tr><td>beach_bar_id</td><td>BIGINT UNSIGNED</td><td>Yes</td><td>beach_bar.id</td><td></td></tr>
+  <tr><td>amenity_id</td><td>BIGINT UNSIGNED</td><td>Yes</td><td>amenity.id</td><td></td></tr>
+</table>
+
+<h3>3.5 sunbed_category</h3>
+<table>
+  <tr><th>Name</th><th>Datatype</th><th>PK</th><th>FK</th><th>Napomene</th></tr>
+  <tr><td>id</td><td>BIGINT UNSIGNED</td><td>Yes</td><td>No</td><td></td></tr>
+  <tr><td>beach_bar_id</td><td>BIGINT UNSIGNED</td><td>No</td><td>beach_bar.id</td><td>NOT NULL</td></tr>
+  <tr><td>name</td><td>VARCHAR(80)</td><td>No</td><td>No</td><td>NOT NULL</td></tr>
+  <tr><td>price</td><td>DECIMAL(10,2)</td><td>No</td><td>No</td><td>NOT NULL</td></tr>
+  <tr><td>description</td><td>VARCHAR(255)</td><td>No</td><td>No</td><td>NULL</td></tr>
+</table>
+
+<h3>3.6 sunbed</h3>
+<table>
+  <tr><th>Name</th><th>Datatype</th><th>PK</th><th>FK</th><th>Napomene</th></tr>
+  <tr><td>id</td><td>BIGINT UNSIGNED</td><td>Yes</td><td>No</td><td></td></tr>
+  <tr><td>beach_bar_id</td><td>BIGINT UNSIGNED</td><td>No</td><td>beach_bar.id</td><td>UNIQUE sa label</td></tr>
+  <tr><td>category_id</td><td>BIGINT UNSIGNED</td><td>No</td><td>sunbed_category.id</td><td></td></tr>
+  <tr><td>label</td><td>VARCHAR(20)</td><td>No</td><td>No</td><td>npr. P3</td></tr>
+  <tr><td>grid_row</td><td>SMALLINT UNSIGNED</td><td>No</td><td>No</td><td>mapa</td></tr>
+  <tr><td>grid_col</td><td>SMALLINT UNSIGNED</td><td>No</td><td>No</td><td>mapa</td></tr>
+</table>
+
+<h3>3.7 reservation</h3>
+<table>
+  <tr><th>Name</th><th>Datatype</th><th>PK</th><th>FK</th><th>Napomene</th></tr>
+  <tr><td>id</td><td>BIGINT UNSIGNED</td><td>Yes</td><td>No</td><td></td></tr>
+  <tr><td>user_id</td><td>BIGINT UNSIGNED</td><td>No</td><td>user.id</td><td></td></tr>
+  <tr><td>sunbed_id</td><td>BIGINT UNSIGNED</td><td>No</td><td>sunbed.id</td><td>UNIQUE sa reservation_date</td></tr>
+  <tr><td>reservation_date</td><td>DATE</td><td>No</td><td>No</td><td>NOT NULL</td></tr>
+  <tr><td>status</td><td>ENUM</td><td>No</td><td>No</td><td>active | completed | cancelled</td></tr>
+  <tr><td>price_at_booking</td><td>DECIMAL(10,2)</td><td>No</td><td>No</td><td>snapshot</td></tr>
+  <tr><td>payment_status</td><td>VARCHAR(20)</td><td>No</td><td>No</td><td>NULL</td></tr>
+  <tr><td>created_at</td><td>DATETIME</td><td>No</td><td>No</td><td></td></tr>
+</table>
+
+<h3>3.8 bundle</h3>
+<table>
+  <tr><th>Name</th><th>Datatype</th><th>PK</th><th>FK</th><th>Napomene</th></tr>
+  <tr><td>id</td><td>BIGINT UNSIGNED</td><td>Yes</td><td>No</td><td></td></tr>
+  <tr><td>beach_bar_id</td><td>BIGINT UNSIGNED</td><td>No</td><td>beach_bar.id</td><td></td></tr>
+  <tr><td>name</td><td>VARCHAR(120)</td><td>No</td><td>No</td><td></td></tr>
+  <tr><td>description</td><td>VARCHAR(255)</td><td>No</td><td>No</td><td>NULL</td></tr>
+  <tr><td>price</td><td>DECIMAL(10,2)</td><td>No</td><td>No</td><td></td></tr>
+  <tr><td>is_active</td><td>TINYINT(1)</td><td>No</td><td>No</td><td>DEFAULT 1</td></tr>
+</table>
+
+<h3>3.9 reservation_bundle</h3>
+<table>
+  <tr><th>Name</th><th>Datatype</th><th>PK</th><th>FK</th><th>Napomene</th></tr>
+  <tr><td>reservation_id</td><td>BIGINT UNSIGNED</td><td>Yes</td><td>reservation.id</td><td></td></tr>
+  <tr><td>bundle_id</td><td>BIGINT UNSIGNED</td><td>Yes</td><td>bundle.id</td><td></td></tr>
+  <tr><td>price_at_booking</td><td>DECIMAL(10,2)</td><td>No</td><td>No</td><td>NOT NULL</td></tr>
+</table>
+
+<h3>3.10 review</h3>
+<table>
+  <tr><th>Name</th><th>Datatype</th><th>PK</th><th>FK</th><th>Napomene</th></tr>
+  <tr><td>id</td><td>BIGINT UNSIGNED</td><td>Yes</td><td>No</td><td></td></tr>
+  <tr><td>user_id</td><td>BIGINT UNSIGNED</td><td>No</td><td>user.id</td><td></td></tr>
+  <tr><td>beach_bar_id</td><td>BIGINT UNSIGNED</td><td>No</td><td>beach_bar.id</td><td></td></tr>
+  <tr><td>rating</td><td>TINYINT UNSIGNED</td><td>No</td><td>No</td><td>CHECK 1–5</td></tr>
+  <tr><td>review_text</td><td>TEXT</td><td>No</td><td>No</td><td>NULL</td></tr>
+  <tr><td>created_at</td><td>DATETIME</td><td>No</td><td>No</td><td></td></tr>
+</table>
+
+<h1>4. Prilog</h1>
+<p>SQL: <code>schema.sql</code>, <code>schema_forward.sql</code> · Model: <code>beachbooker_EER_model.mwb</code></p>
+
+</body>
+</html>

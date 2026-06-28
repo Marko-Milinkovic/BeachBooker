@@ -6,19 +6,36 @@ Most beach days do not start relaxed, they start with a race for a strip of sand
 
 | Path | Purpose |
 |------|--------|
-| `prototype/` | Static HTML/CSS mockup prototype of main screens |
-| `specs/` | Requirements, target Django layout, and related notes |
+| `manage.py`, `beachbooker/`, `core/` | Django app (MVT) — backend + templates + static |
+| `html_pages/` | Static HTML/CSS prototype (reference for templates) |
+| `initial_phases/` | SRS, SSU, specs (`project_structure.txt`, `requirements.txt`) |
+| `database/` | SQL schema, coursework templates; deliverables in `database/README/` |
+| `context/` | Course slides (architecture, Django vežbe) |
 
-Planned backend stack: **Django**, **MySQL**, and **AJAX** for dynamic UI. The intended project tree is described in `specs/project_structure.txt`. Python dependencies are pinned in `specs/requirements.txt` until a Django project exists at the repository root.
+Stack: **Django**, **MySQL**, **AJAX** for dynamic UI (map, booking).
 
-## Viewing the prototype
-
-You can download the project as a ZIP from GitHub (green button **Code** → **Download ZIP**), extract it, and open `prototype/index.html` in your browser.
-
-If you have the repository cloned locally, open `prototype/index.html` in a browser, or from the repo root serve the folder locally, for example:
+## Local setup (Django)
 
 ```bash
-python -m http.server 8000 --directory prototype
+python -m venv venv
+# Windows (MSYS): venv\bin\python   |   standard Windows: venv\Scripts\python
+venv\bin\python -m pip install -r requirements.txt
+copy .env.example .env
+# Edit .env — set DB_PASSWORD and DB_PORT (default 3308)
+venv\bin\python manage.py migrate
+venv\bin\python manage.py runserver
+```
+
+Open `http://127.0.0.1:8000/`. Import `database/schema.sql` in MySQL Workbench before using BeachBooker tables.
+
+**Do not commit `.env`** — only `.env.example` (placeholders).
+
+## Viewing the static prototype
+
+Open `html_pages/index.html` in a browser, or:
+
+```bash
+python -m http.server 8000 --directory html_pages
 ```
 
 Then visit `http://localhost:8000/index.html`.
