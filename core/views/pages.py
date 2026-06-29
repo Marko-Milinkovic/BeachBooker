@@ -10,7 +10,10 @@ from core.services.beach_bar import (
     get_beach_bar_page_context,
     parse_filter_date,
 )
-from core.services.reservations import mark_past_reservations_completed
+from core.services.reservations import (
+    get_reservation_line_total,
+    mark_past_reservations_completed,
+)
 
 
 def get_explore_bars(city="", filter_date=None):
@@ -89,26 +92,35 @@ def my_reservations(request):
     reservations = (
         Reservation.objects.filter(user=request.user)
         .select_related("sunbed", "sunbed__beach_bar", "sunbed__category")
+        .prefetch_related("reservationbundle_set__bundle")
         .order_by("-reservation_date", "-created_at")
     )
     today = date.today()
+
+    def with_line_totals(items):
+        for reservation in items:
+            reservation.line_total = get_reservation_line_total(reservation)
+        return items
+
     return render(
         request,
         "core/my_reservations.html",
         {
             "active_nav": "bookings",
-            "active_reservations": [
-                r
-                for r in reservations
-                if r.status == ReservationStatus.ACTIVE
-                and r.reservation_date >= today
-            ],
-            "past_reservations": [
-                r for r in reservations if r.status == ReservationStatus.COMPLETED
-            ],
-            "cancelled_reservations": [
-                r for r in reservations if r.status == ReservationStatus.CANCELLED
-            ],
+            "active_reservations": with_line_totals(
+                [
+                    r
+                    for r in reservations
+                    if r.status == ReservationStatus.ACTIVE
+                    and r.reservation_date >= today
+                ]
+            ),
+            "past_reservations": with_line_totals(
+                [r for r in reservations if r.status == ReservationStatus.COMPLETED]
+            ),
+            "cancelled_reservations": with_line_totals(
+                [r for r in reservations if r.status == ReservationStatus.CANCELLED]
+            ),
         },
     )
 

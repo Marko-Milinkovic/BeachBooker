@@ -13,6 +13,7 @@ from core.services.owner import (
     get_dashboard_overview,
     get_owner_bar,
 )
+from core.services.reservations import get_reservation_line_total
 
 
 def owner_required(view_func):
@@ -45,11 +46,15 @@ def dashboard(request):
 
     overview = get_dashboard_overview(request.owner_bar, filter_date)
     res_filter_date = filter_date if active_tab == "reservations" else None
-    reservations = get_bar_reservations(
-        request.owner_bar,
-        filter_date=res_filter_date,
-        status=status_filter,
+    reservations = list(
+        get_bar_reservations(
+            request.owner_bar,
+            filter_date=res_filter_date,
+            status=status_filter,
+        )
     )
+    for reservation in reservations:
+        reservation.line_total = get_reservation_line_total(reservation)
     categories = list(
         request.owner_bar.sunbed_categories.order_by("price", "name")
     )

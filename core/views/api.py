@@ -93,9 +93,23 @@ def book_sunbeds_api(request, bar_id):
             status=400,
         )
 
+    bundle_ids = payload.get("bundle_ids") or []
+    if not isinstance(bundle_ids, list):
+        return JsonResponse(
+            {"error": "bundle_ids must be a list.", "code": "invalid_bundles"},
+            status=400,
+        )
+    try:
+        bundle_ids = [int(bid) for bid in bundle_ids]
+    except (TypeError, ValueError):
+        return JsonResponse(
+            {"error": "Invalid bundle selection.", "code": "invalid_bundles"},
+            status=400,
+        )
+
     try:
         reservations = book_sunbeds(
-            request.user, bar, reservation_date, sunbed_ids
+            request.user, bar, reservation_date, sunbed_ids, bundle_ids
         )
     except BookingError as exc:
         return JsonResponse(

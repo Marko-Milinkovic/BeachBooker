@@ -54,6 +54,7 @@ TEMPLATES = [
                 "django.template.context_processors.request",
                 "django.contrib.auth.context_processors.auth",
                 "django.contrib.messages.context_processors.messages",
+                "core.context_processors.app_js_version",
             ],
         },
     },
@@ -89,6 +90,7 @@ USE_TZ = True
 
 STATIC_URL = "static/"
 STATICFILES_DIRS = [BASE_DIR / "core" / "static"]
+APP_JS_VERSION = "7"
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 

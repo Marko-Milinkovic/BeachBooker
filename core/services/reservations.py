@@ -4,6 +4,13 @@ from django.db import transaction
 
 from core.models import BeachBar, Reservation, ReservationStatus, Sunbed
 from core.services.beach_bar import get_reserved_sunbed_ids, parse_filter_date
+from core.services.bundles import (
+    BundleError,
+    attach_bundles_to_reservation,
+    get_reservation_bundle_total,
+    resolve_booking_bundles,
+    serialize_reservation_bundles,
+)
 
 
 class BookingError(Exception):
@@ -14,9 +21,14 @@ class BookingError(Exception):
 
 
 @transaction.atomic
-def book_sunbeds(user, beach_bar, reservation_date, sunbed_ids):
+def book_sunbeds(user, beach_bar, reservation_date, sunbed_ids, bundle_ids=None):
     if not sunbed_ids:
         raise BookingError("Select at least one spot.", "no_spots")
+
+    try:
+        bundles = resolve_booking_bundles(beach_bar, bundle_ids or [])
+    except BundleError as exc:
+        raise BookingError(exc.message, exc.code) from exc
 
     unique_ids = list(dict.fromkeys(sunbed_ids))
     sunbeds = list(
@@ -29,8 +41,11 @@ def book_sunbeds(user, beach_bar, reservation_date, sunbed_ids):
     if len(sunbeds) != len(unique_ids):
         raise BookingError("Invalid spot selection.", "invalid_spots")
 
+    sunbed_by_id = {sunbed.id: sunbed for sunbed in sunbeds}
+    ordered_sunbeds = [sunbed_by_id[sunbed_id] for sunbed_id in unique_ids]
+
     reserved_ids = get_reserved_sunbed_ids(beach_bar, reservation_date)
-    for sunbed in sunbeds:
+    for sunbed in ordered_sunbeds:
         if sunbed.id in reserved_ids:
             raise BookingError(
                 f"Spot {sunbed.label} is no longer available.",
@@ -38,7 +53,7 @@ def book_sunbeds(user, beach_bar, reservation_date, sunbed_ids):
             )
 
     reservations = []
-    for sunbed in sunbeds:
+    for sunbed in ordered_sunbeds:
         existing = Reservation.objects.filter(
             sunbed=sunbed,
             reservation_date=reservation_date,
@@ -72,6 +87,12 @@ def book_sunbeds(user, beach_bar, reservation_date, sunbed_ids):
                 price_at_booking=sunbed.category.price,
             )
         )
+
+    if reservations:
+        attach_bundles_to_reservation(reservations[0], bundles)
+        for reservation in reservations[1:]:
+            attach_bundles_to_reservation(reservation, [])
+
     return reservations
 
 
@@ -106,13 +127,22 @@ def mark_past_reservations_completed(user=None):
     return queryset.update(status=ReservationStatus.COMPLETED)
 
 
+def get_reservation_line_total(reservation):
+    return reservation.price_at_booking + get_reservation_bundle_total(reservation)
+
+
 def serialize_reservation(reservation):
     bar = reservation.sunbed.beach_bar
+    bundle_total = get_reservation_bundle_total(reservation)
+    line_total = reservation.price_at_booking + bundle_total
     return {
         "id": reservation.id,
         "date": reservation.reservation_date.isoformat(),
         "status": reservation.status,
         "price": str(reservation.price_at_booking),
+        "bundles": serialize_reservation_bundles(reservation),
+        "bundle_total": str(bundle_total),
+        "line_total": str(line_total),
         "sunbed_id": reservation.sunbed_id,
         "sunbed_label": reservation.sunbed.label,
         "bar_id": bar.id,

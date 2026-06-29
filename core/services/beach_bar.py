@@ -3,6 +3,7 @@ from datetime import date, timedelta
 from django.db.models import Avg, Count, Min
 
 from core.models import BeachBar, Reservation, ReservationStatus, Sunbed
+from core.services.bundles import list_active_bundles
 
 BAR_IMAGES = {
     "Blue Horizon Beach Club": (
@@ -137,6 +138,7 @@ def get_beach_bar_page_context(bar, filter_date=None):
     reserved_count = len(get_reserved_sunbed_ids(bar, filter_date))
     amenities = [link.amenity.name for link in bar.beachbaramenity_set.select_related("amenity")]
     categories = list(bar.sunbed_categories.order_by("price"))
+    bundles = list(list_active_bundles(bar))
 
     return {
         "bar": bar,
@@ -145,6 +147,7 @@ def get_beach_bar_page_context(bar, filter_date=None):
         "image_url": bar_image_url(bar),
         "amenities": amenities,
         "categories": categories,
+        "bundles": bundles,
         "min_price": stats.min_price,
         "total_spots": stats.total_spots,
         "free_spots": max(stats.total_spots - reserved_count, 0),

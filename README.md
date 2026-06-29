@@ -86,9 +86,10 @@ Auth uses Django sessions (cookie-based). Register at `/register/` or log in at 
 **Booking flow (logged-in guest)**
 
 1. Open a beach bar from Explore, pick a date, tap free spots on the map.
-2. Click **Book now** — creates active reservations in the database.
-3. **My Bookings** lists active, past (completed), and cancelled reservations.
-4. Cancel an active booking from My Bookings; the spot becomes free on the map again.
+2. Optionally select **add-on bundles** (e.g. drinks, parking) in the booking panel.
+3. Click **Book now** — creates active reservations in the database (`reservation_bundle` stores add-on price snapshots).
+4. **My Bookings** lists active, past (completed), and cancelled reservations with spot + add-on totals.
+5. Cancel an active booking from My Bookings; the spot becomes free on the map again.
 
 **Owner dashboard (logged-in owner)**
 
@@ -97,7 +98,7 @@ Auth uses Django sessions (cookie-based). Register at `/register/` or log in at 
 3. **Reservations** — all guest bookings for your bar; filter by date and status.
 4. **Cancel** an active guest booking; the spot becomes free on the guest map.
 5. **Pricing** — edit per-category sunbed prices; new bookings snapshot the updated price.
-6. **Bundles** — create, edit, and enable/disable add-on bundles (guest checkout in a later slice).
+6. **Bundles** — create, edit, and enable/disable add-on bundles; guests select them when booking.
 
 **Run tests**
 

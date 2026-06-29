@@ -2,7 +2,7 @@ from decimal import Decimal
 
 from django.db.models import Sum
 
-from core.models import BeachBar, Reservation, ReservationStatus, Sunbed, SunbedCategory, User
+from core.models import BeachBar, Reservation, ReservationBundle, ReservationStatus, Sunbed, SunbedCategory, User
 from core.services.beach_bar import get_reserved_sunbed_ids, parse_filter_date
 
 
@@ -42,9 +42,13 @@ def get_dashboard_overview(beach_bar, filter_date):
         status=ReservationStatus.ACTIVE,
     )
     bookings_count = active_reservations.count()
-    revenue = active_reservations.aggregate(total=Sum("price_at_booking"))["total"] or Decimal(
-        "0"
-    )
+    spot_revenue = active_reservations.aggregate(
+        total=Sum("price_at_booking")
+    )["total"] or Decimal("0")
+    bundle_revenue = ReservationBundle.objects.filter(
+        reservation__in=active_reservations
+    ).aggregate(total=Sum("price_at_booking"))["total"] or Decimal("0")
+    revenue = spot_revenue + bundle_revenue
 
     occupancy_pct = 0
     if total_spots:
@@ -85,6 +89,7 @@ def get_bar_reservations(beach_bar, filter_date=None, status=""):
     queryset = (
         Reservation.objects.filter(sunbed__beach_bar=beach_bar)
         .select_related("user", "sunbed", "sunbed__category")
+        .prefetch_related("reservationbundle_set__bundle")
         .order_by("-reservation_date", "-created_at")
     )
     if filter_date is not None:

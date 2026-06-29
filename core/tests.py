@@ -9,6 +9,7 @@ from core.models import (
     BeachBar,
     Bundle,
     Reservation,
+    ReservationBundle,
     ReservationStatus,
     Sunbed,
     SunbedCategory,
@@ -19,6 +20,7 @@ from core.services.beach_bar import get_sunbed_map_payload
 from core.services.bundles import (
     BundleError,
     create_bundle,
+    list_active_bundles,
     list_bundles,
     set_bundle_active,
     update_bundle,
@@ -34,7 +36,9 @@ from core.services.reservations import (
     BookingError,
     book_sunbeds,
     cancel_reservation,
+    get_reservation_line_total,
     mark_past_reservations_completed,
+    serialize_reservation,
 )
 
 
@@ -837,6 +841,276 @@ class PricingIntegrationTests(BookingTestMixin, TestCase):
         self.assertContains(response, "new-bundle-btn")
 
 
+class BundleBookingServiceTests(BookingTestMixin, TestCase):
+    def setUp(self):
+        self.drinks = create_bundle(self.bar, "Drinks", "Two drinks", "8.00")
+        self.parking = create_bundle(self.bar, "Parking", "Nearby", "5.00")
+
+    def test_list_active_bundles_excludes_inactive(self):
+        set_bundle_active(self.bar, self.parking.id, False)
+        active = list(list_active_bundles(self.bar))
+        self.assertEqual(len(active), 1)
+        self.assertEqual(active[0].id, self.drinks.id)
+
+    def test_book_with_bundle_attaches_to_first_reservation_only(self):
+        reservations = book_sunbeds(
+            self.guest,
+            self.bar,
+            self.book_date,
+            [self.sunbed_a.id, self.sunbed_b.id],
+            bundle_ids=[self.drinks.id],
+        )
+        self.assertEqual(len(reservations), 2)
+        self.assertEqual(
+            ReservationBundle.objects.filter(reservation=reservations[0]).count(),
+            1,
+        )
+        self.assertEqual(
+            ReservationBundle.objects.filter(reservation=reservations[1]).count(),
+            0,
+        )
+
+    def test_book_snapshots_bundle_price(self):
+        reservations = book_sunbeds(
+            self.guest,
+            self.bar,
+            self.book_date,
+            [self.sunbed_a.id],
+            bundle_ids=[self.drinks.id],
+        )
+        row = ReservationBundle.objects.get(reservation=reservations[0])
+        self.assertEqual(row.price_at_booking, Decimal("8.00"))
+
+        update_bundle(self.bar, self.drinks.id, "Drinks", "Two drinks", "10.00")
+        row.refresh_from_db()
+        self.assertEqual(row.price_at_booking, Decimal("8.00"))
+
+    def test_serialize_reservation_includes_bundle_totals(self):
+        reservations = book_sunbeds(
+            self.guest,
+            self.bar,
+            self.book_date,
+            [self.sunbed_a.id],
+            bundle_ids=[self.drinks.id, self.parking.id],
+        )
+        payload = serialize_reservation(reservations[0])
+        self.assertEqual(payload["bundle_total"], "13.00")
+        self.assertEqual(payload["line_total"], "38.00")
+        self.assertEqual(len(payload["bundles"]), 2)
+
+    def test_get_reservation_line_total(self):
+        reservations = book_sunbeds(
+            self.guest,
+            self.bar,
+            self.book_date,
+            [self.sunbed_a.id],
+            bundle_ids=[self.parking.id],
+        )
+        self.assertEqual(get_reservation_line_total(reservations[0]), Decimal("30.00"))
+
+    def test_book_rejects_inactive_bundle(self):
+        set_bundle_active(self.bar, self.drinks.id, False)
+        with self.assertRaises(BookingError) as ctx:
+            book_sunbeds(
+                self.guest,
+                self.bar,
+                self.book_date,
+                [self.sunbed_a.id],
+                bundle_ids=[self.drinks.id],
+            )
+        self.assertEqual(ctx.exception.code, "inactive_bundle")
+
+    def test_book_rejects_foreign_bundle(self):
+        other_owner = User.objects.create_user(
+            email="other-owner4@test.beach",
+            password="testpass123",
+            first_name="Other",
+            last_name="Owner",
+            role=UserRole.OWNER,
+        )
+        other_bar = BeachBar.objects.create(
+            owner=other_owner,
+            name="Other Beach",
+            address="2 Shore Rd",
+            city="Kotor",
+            opening_time=time(8, 0),
+            closing_time=time(20, 0),
+        )
+        foreign = create_bundle(other_bar, "Foreign", None, "4.00")
+        with self.assertRaises(BookingError) as ctx:
+            book_sunbeds(
+                self.guest,
+                self.bar,
+                self.book_date,
+                [self.sunbed_a.id],
+                bundle_ids=[foreign.id],
+            )
+        self.assertEqual(ctx.exception.code, "invalid_bundle")
+
+    def test_rebook_cancelled_spot_replaces_bundles(self):
+        reservations = book_sunbeds(
+            self.guest,
+            self.bar,
+            self.book_date,
+            [self.sunbed_a.id],
+            bundle_ids=[self.drinks.id],
+        )
+        cancel_reservation(self.guest, reservations[0].id)
+        rebound = book_sunbeds(
+            self.guest,
+            self.bar,
+            self.book_date,
+            [self.sunbed_a.id],
+            bundle_ids=[self.parking.id],
+        )[0]
+        rows = ReservationBundle.objects.filter(reservation=rebound)
+        self.assertEqual(rows.count(), 1)
+        self.assertEqual(rows.first().bundle_id, self.parking.id)
+
+
+class BundleBookingApiTests(BookingTestMixin, TestCase):
+    def setUp(self):
+        self.drinks = create_bundle(self.bar, "Drinks", "Two drinks", "8.00")
+
+    def test_book_with_bundles_via_api(self):
+        self.login_guest()
+        response = self.api_post(
+            self.client,
+            reverse("api_book_sunbeds", args=[self.bar.id]),
+            {
+                "date": self.book_date.isoformat(),
+                "sunbed_ids": [self.sunbed_a.id],
+                "bundle_ids": [self.drinks.id],
+            },
+        )
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        self.assertTrue(data["ok"])
+        reservation = data["reservations"][0]
+        self.assertEqual(reservation["bundle_total"], "8.00")
+        self.assertEqual(reservation["line_total"], "33.00")
+        self.assertEqual(reservation["bundles"][0]["name"], "Drinks")
+
+    def test_book_rejects_inactive_bundle_via_api(self):
+        set_bundle_active(self.bar, self.drinks.id, False)
+        self.login_guest()
+        response = self.api_post(
+            self.client,
+            reverse("api_book_sunbeds", args=[self.bar.id]),
+            {
+                "date": self.book_date.isoformat(),
+                "sunbed_ids": [self.sunbed_a.id],
+                "bundle_ids": [self.drinks.id],
+            },
+        )
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.json()["code"], "inactive_bundle")
+
+    def test_book_without_bundles_still_works(self):
+        self.login_guest()
+        response = self.api_post(
+            self.client,
+            reverse("api_book_sunbeds", args=[self.bar.id]),
+            {
+                "date": self.book_date.isoformat(),
+                "sunbed_ids": [self.sunbed_a.id],
+            },
+        )
+        self.assertEqual(response.status_code, 200)
+        reservation = response.json()["reservations"][0]
+        self.assertEqual(reservation["bundle_total"], "0.00")
+        self.assertEqual(reservation["line_total"], "25.00")
+        self.assertEqual(reservation["bundles"], [])
+
+
+class BeachBarBundleUiTests(BookingTestMixin, TestCase):
+    def test_beach_bar_shows_active_bundles(self):
+        drinks = create_bundle(self.bar, "Drinks Package", "Two drinks", "8.00")
+        response = self.client.get(
+            reverse("beach_bar", args=[self.bar.id]),
+            {"date": self.book_date.isoformat()},
+        )
+        self.assertContains(response, "Drinks Package")
+        self.assertContains(response, "bundle-addons")
+        self.assertContains(response, f'data-bundle-id="{drinks.id}"')
+        self.assertContains(response, "sum-extras")
+
+    def test_beach_bar_hides_inactive_bundles(self):
+        create_bundle(self.bar, "Drinks Package", "Two drinks", "8.00")
+        parking = create_bundle(self.bar, "Parking", "Nearby", "5.00")
+        set_bundle_active(self.bar, parking.id, False)
+        response = self.client.get(
+            reverse("beach_bar", args=[self.bar.id]),
+            {"date": self.book_date.isoformat()},
+        )
+        self.assertContains(response, "Drinks Package")
+        self.assertNotContains(response, ">Parking<")
+
+    def test_beach_bar_without_bundles_omits_addon_section(self):
+        response = self.client.get(
+            reverse("beach_bar", args=[self.bar.id]),
+            {"date": self.book_date.isoformat()},
+        )
+        self.assertNotContains(response, "bundle-addons")
+
+
+class MyBookingsBundleTests(BookingTestMixin, TestCase):
+    def test_my_bookings_shows_bundle_lines_and_total(self):
+        drinks = create_bundle(self.bar, "Drinks Package", "Two drinks", "8.00")
+        book_sunbeds(
+            self.guest,
+            self.bar,
+            self.book_date,
+            [self.sunbed_a.id],
+            bundle_ids=[drinks.id],
+        )
+        self.login_guest()
+        response = self.client.get(reverse("my_reservations"))
+        self.assertContains(response, "Drinks Package")
+        self.assertContains(response, "&euro;33")
+
+    def test_my_bookings_without_bundles_shows_spot_price_only(self):
+        book_sunbeds(self.guest, self.bar, self.book_date, [self.sunbed_a.id])
+        self.login_guest()
+        response = self.client.get(reverse("my_reservations"))
+        self.assertContains(response, "&euro;25")
+        self.assertNotContains(response, "Drinks Package")
+
+
+class OwnerBundleRevenueTests(BookingTestMixin, TestCase):
+    def test_overview_revenue_includes_bundle_add_ons(self):
+        drinks = create_bundle(self.bar, "Drinks Package", "Two drinks", "8.00")
+        book_sunbeds(
+            self.guest,
+            self.bar,
+            self.book_date,
+            [self.sunbed_a.id],
+            bundle_ids=[drinks.id],
+        )
+        overview = get_dashboard_overview(self.bar, self.book_date)
+        self.assertEqual(overview["revenue"], Decimal("33.00"))
+
+    def test_owner_reservations_tab_shows_line_total_with_bundle(self):
+        drinks = create_bundle(self.bar, "Drinks Package", "Two drinks", "8.00")
+        book_sunbeds(
+            self.guest,
+            self.bar,
+            self.book_date,
+            [self.sunbed_a.id],
+            bundle_ids=[drinks.id],
+        )
+        self.client.login(email=self.owner.email, password="testpass123")
+        response = self.client.get(
+            reverse("owner_dashboard"),
+            {
+                "tab": "reservations",
+                "date": self.book_date.isoformat(),
+            },
+        )
+        self.assertContains(response, "guest@test.beach")
+        self.assertContains(response, "&euro;33")
+
+
 class Slice6FlowTests(BookingTestMixin, TestCase):
     """Chained HTTP flows for owner pricing/bundles (dashboard.js payload shapes)."""
 
@@ -1033,3 +1307,94 @@ class Slice6FlowTests(BookingTestMixin, TestCase):
         self.assertContains(response, 'id="tab-bundles"')
         self.assertContains(response, 'id="bundle-form"')
         self.assertContains(response, 'id="save-pricing-btn"')
+
+
+class Slice7FlowTests(BookingTestMixin, TestCase):
+    def test_guest_bundle_booking_flow_end_to_end(self):
+        drinks = create_bundle(self.bar, "Drinks Package", "Two drinks", "8.00")
+        guest_client = Client(HTTP_HOST="127.0.0.1")
+        guest_client.login(email=self.guest.email, password="testpass123")
+
+        beach_page = guest_client.get(
+            reverse("beach_bar", args=[self.bar.id]),
+            {"date": self.book_date.isoformat()},
+        )
+        self.assertContains(beach_page, "Drinks Package")
+        self.assertContains(beach_page, f'data-bundle-id="{drinks.id}"')
+
+        book_response = self.api_post(
+            guest_client,
+            reverse("api_book_sunbeds", args=[self.bar.id]),
+            {
+                "date": self.book_date.isoformat(),
+                "sunbed_ids": [self.sunbed_a.id],
+                "bundle_ids": [drinks.id],
+            },
+        )
+        self.assertEqual(book_response.status_code, 200)
+        self.assertEqual(book_response.json()["reservations"][0]["line_total"], "33.00")
+
+        my_bookings = guest_client.get(reverse("my_reservations"))
+        self.assertContains(my_bookings, "Drinks Package")
+        self.assertContains(my_bookings, "&euro;33")
+
+        owner_client = Client(HTTP_HOST="127.0.0.1")
+        owner_client.login(email=self.owner.email, password="testpass123")
+        owner_page = owner_client.get(
+            reverse("owner_dashboard"),
+            {
+                "tab": "reservations",
+                "date": self.book_date.isoformat(),
+            },
+        )
+        self.assertContains(owner_page, "&euro;33")
+        overview = owner_client.get(
+            reverse("owner_dashboard"),
+            {"date": self.book_date.isoformat()},
+        )
+        self.assertContains(overview, "&euro;33")
+
+    def test_multi_spot_booking_charges_bundles_once(self):
+        drinks = create_bundle(self.bar, "Drinks Package", "Two drinks", "8.00")
+        self.login_guest()
+        response = self.api_post(
+            self.client,
+            reverse("api_book_sunbeds", args=[self.bar.id]),
+            {
+                "date": self.book_date.isoformat(),
+                "sunbed_ids": [self.sunbed_a.id, self.sunbed_b.id],
+                "bundle_ids": [drinks.id],
+            },
+        )
+        self.assertEqual(response.status_code, 200)
+        reservations = response.json()["reservations"]
+        self.assertEqual(reservations[0]["bundle_total"], "8.00")
+        self.assertEqual(reservations[0]["line_total"], "33.00")
+        self.assertEqual(reservations[1]["bundle_total"], "0.00")
+        self.assertEqual(reservations[1]["line_total"], "25.00")
+
+        overview = get_dashboard_overview(self.bar, self.book_date)
+        self.assertEqual(overview["revenue"], Decimal("58.00"))
+
+    def test_deactivated_bundle_hidden_and_rejected(self):
+        drinks = create_bundle(self.bar, "Drinks Package", "Two drinks", "8.00")
+        set_bundle_active(self.bar, drinks.id, False)
+
+        page = self.client.get(
+            reverse("beach_bar", args=[self.bar.id]),
+            {"date": self.book_date.isoformat()},
+        )
+        self.assertNotContains(page, "Drinks Package")
+
+        self.login_guest()
+        response = self.api_post(
+            self.client,
+            reverse("api_book_sunbeds", args=[self.bar.id]),
+            {
+                "date": self.book_date.isoformat(),
+                "sunbed_ids": [self.sunbed_a.id],
+                "bundle_ids": [drinks.id],
+            },
+        )
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.json()["code"], "inactive_bundle")

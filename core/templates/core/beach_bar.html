@@ -112,8 +112,31 @@
         </div>
         {% endif %}
 
+        {% if bundles %}
+        <div class="bpanel__addons" id="bundle-addons">
+          <div class="filters__group-label" style="margin-bottom:4px">Add-ons</div>
+          {% for bundle in bundles %}
+          <div class="addon"
+               role="button"
+               tabindex="0"
+               aria-pressed="false"
+               data-bundle-id="{{ bundle.id }}"
+               data-price="{{ bundle.price|floatformat:2 }}">
+            <div class="addon__info">
+              <b>{{ bundle.name }}</b>
+              {% if bundle.description %}
+              <span>{{ bundle.description }}</span>
+              {% endif %}
+            </div>
+            <div class="addon__price">+&euro;{{ bundle.price|floatformat:0 }}</div>
+          </div>
+          {% endfor %}
+        </div>
+        {% endif %}
+
         <div class="bpanel__summary">
           <div class="bpanel__line"><span>Spots (<span id="sum-bed">0</span>)</span><span id="sum-price">&euro;0</span></div>
+          <div class="bpanel__line" id="sum-extras-row"{% if not bundles %} style="display:none"{% endif %}><span>Add-ons</span><span id="sum-extras">&euro;0</span></div>
           <div class="bpanel__total"><span>Total</span><span id="sum-total">&euro;0</span></div>
         </div>
 
@@ -143,5 +166,5 @@
 {% endblock %}
 
 {% block extra_js %}
-<script src="{% static 'core/js/beach_bar.js' %}"></script>
+<script src="{% static 'core/js/beach_bar.js' %}?v={{ APP_JS_VERSION }}"></script>
 {% endblock %}

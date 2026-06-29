@@ -89,7 +89,7 @@
           <td>{{ reservation.sunbed.label }}</td>
           <td>{{ reservation.sunbed.category.name }}</td>
           <td>{{ reservation.reservation_date|date:"M j, Y" }}</td>
-          <td>&euro;{{ reservation.price_at_booking|floatformat:0 }}</td>
+          <td>&euro;{{ reservation.line_total|floatformat:0 }}</td>
           <td>
             {% if reservation.status == 'active' %}
             <span class="badge badge--ok">Active</span>
