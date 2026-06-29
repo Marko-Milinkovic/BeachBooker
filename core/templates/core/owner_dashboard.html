@@ -218,4 +218,60 @@
     </div>
   </form>
 </section>
+
+<section id="tab-layout" class="dash-panel"{% if active_tab != 'layout' %} style="display:none"{% endif %}
+         data-layout-url="{% url 'api_owner_layout' %}">
+  <div class="dash__head">
+    <h1 class="dash__title">Beach layout editor</h1>
+    <p class="dash__sub">Set grid size, pick a category, and click cells to place sunbeds. Empty cells are not bookable. Labels are assigned automatically when you save.</p>
+  </div>
+
+  {% if not categories %}
+  <div class="card">
+    <p class="tbl__empty">Add sunbed categories under <a href="{% url 'owner_dashboard' %}?tab=pricing">Pricing</a> before editing the layout.</p>
+  </div>
+  {% else %}
+  <div class="card le-controls">
+    <div class="le-controls__row">
+      <span class="le-controls__label">Grid size</span>
+      <div class="field le-field">
+        <label for="le-rows">Rows</label>
+        <input type="number" class="input le-size-input" id="le-rows" value="4" min="1" max="12">
+      </div>
+      <div class="field le-field">
+        <label for="le-cols">Columns</label>
+        <input type="number" class="input le-size-input" id="le-cols" value="10" min="1" max="20">
+      </div>
+      <button type="button" class="btn btn--outline btn--pill" id="le-apply-grid">Apply</button>
+      <button type="button" class="btn btn--ghost" id="le-clear">Clear all</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="le-palette-wrap">
+      <span class="le-controls__label">Palette</span>
+      <div class="le-palette" id="le-palette"></div>
+      <p class="le-no-categories" id="le-no-categories" style="display:none">No categories available.</p>
+    </div>
+  </div>
+
+  <div class="le-canvas">
+    <div class="le-sea">SEA</div>
+    <div class="le-grid" id="le-grid" aria-label="Layout grid"></div>
+    <div class="le-bar">Beach bar &amp; restaurant</div>
+  </div>
+
+  <div class="card le-summary-card">
+    <div class="le-summary-head">
+      <span class="le-controls__label">Summary</span>
+      <div class="le-summary" id="le-summary"></div>
+    </div>
+  </div>
+
+  <div class="le-sticky-save">
+    <span class="le-sticky-save__hint" id="le-dirty-hint" style="display:none">Unsaved changes</span>
+    <button type="button" class="btn btn--teal btn--pill" id="le-save">Save layout</button>
+  </div>
+  {% endif %}
+</section>
 {% endblock %}

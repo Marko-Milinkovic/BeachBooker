@@ -5,7 +5,7 @@ from django.shortcuts import redirect, render
 
 from core.models import UserRole
 
-OWNER_TABS = ("overview", "reservations", "pricing", "bundles")
+OWNER_TABS = ("overview", "reservations", "pricing", "bundles", "layout")
 from core.services.beach_bar import parse_filter_date
 from core.services.bundles import list_bundles
 from core.services.owner import (

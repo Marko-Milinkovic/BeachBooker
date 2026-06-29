@@ -99,6 +99,15 @@ Auth uses Django sessions (cookie-based). Register at `/register/` or log in at 
 4. **Cancel** an active guest booking; the spot becomes free on the guest map.
 5. **Pricing** — edit per-category sunbed prices; new bookings snapshot the updated price.
 6. **Bundles** — create, edit, and enable/disable add-on bundles; guests select them when booking.
+7. **Layout** — paint the beach grid (rows × columns), place sunbeds by category, and save. Spot labels (e.g. S1, P2) are assigned automatically on save. You cannot remove or move a sunbed that has an active future booking; sunbeds with any past reservation history cannot be deleted from the layout.
+
+**Layout editor manual check**
+
+1. Owner → **Layout** — grid loads with existing sunbeds (Blue Horizon after `seed_demo`).
+2. Paint cells, **Save layout** — hard refresh (`Ctrl+Shift+R`) — layout persists.
+3. Guest beach bar map shows updated spots and labels.
+4. Book a spot → owner tries to erase that cell — blocked with an error message.
+5. After cancel, the spot still cannot be erased (booking history); only spots with no reservations can be removed.
 
 **Run tests**
 

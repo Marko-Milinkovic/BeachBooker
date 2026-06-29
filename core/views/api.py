@@ -15,6 +15,11 @@ from core.services.bundles import (
     set_bundle_active,
     update_bundle,
 )
+from core.services.layout import (
+    LayoutError,
+    get_layout_editor_payload,
+    save_bar_layout,
+)
 from core.services.owner import get_owner_bar
 from core.services.pricing import PricingError, update_category_prices
 from core.services.reservations import (
@@ -284,3 +289,44 @@ def owner_toggle_bundle(request, bundle_id):
         )
 
     return JsonResponse({"ok": True, "bundle": serialize_bundle(bundle)})
+
+
+@owner_required_json
+def owner_layout(request):
+    if request.method == "GET":
+        return JsonResponse(get_layout_editor_payload(request.owner_bar))
+
+    if request.method != "POST":
+        return JsonResponse(
+            {"error": "Method not allowed.", "code": "method_not_allowed"},
+            status=405,
+        )
+
+    payload = _parse_json_body(request)
+    if payload is None:
+        return JsonResponse(
+            {"error": "Invalid JSON body.", "code": "invalid_json"},
+            status=400,
+        )
+
+    cells = payload.get("cells")
+    if cells is None:
+        return JsonResponse(
+            {"error": "cells is required.", "code": "invalid_cells"},
+            status=400,
+        )
+
+    try:
+        layout = save_bar_layout(
+            request.owner_bar,
+            payload.get("rows"),
+            payload.get("cols"),
+            cells,
+        )
+    except LayoutError as exc:
+        return JsonResponse(
+            {"error": exc.message, "code": exc.code},
+            status=400,
+        )
+
+    return JsonResponse({"ok": True, "layout": layout})

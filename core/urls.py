@@ -25,6 +25,7 @@ urlpatterns = [
         api.owner_toggle_bundle,
         name="api_owner_toggle_bundle",
     ),
+    path("api/owner/layout/", api.owner_layout, name="api_owner_layout"),
     path("login/", auth.login_page, name="login"),
     path("register/", auth.register_page, name="register"),
     path("logout/", auth.logout_page, name="logout"),

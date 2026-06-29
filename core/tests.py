@@ -31,6 +31,11 @@ from core.services.owner import (
     get_dashboard_overview,
     get_owner_bar,
 )
+from core.services.layout import (
+    LayoutError,
+    get_layout_editor_payload,
+    save_bar_layout,
+)
 from core.services.pricing import PricingError, update_category_prices
 from core.services.reservations import (
     BookingError,
@@ -1398,3 +1403,608 @@ class Slice7FlowTests(BookingTestMixin, TestCase):
         )
         self.assertEqual(response.status_code, 400)
         self.assertEqual(response.json()["code"], "inactive_bundle")
+
+
+class LayoutServiceTests(BookingTestMixin, TestCase):
+    def test_get_layout_payload_includes_existing_sunbed(self):
+        payload = get_layout_editor_payload(self.bar)
+        self.assertGreaterEqual(payload["rows"], 1)
+        self.assertGreaterEqual(payload["cols"], 1)
+        cell = payload["cells"][self.sunbed_a.grid_row][self.sunbed_a.grid_col]
+        self.assertIsNotNone(cell)
+        self.assertEqual(cell["sunbed_id"], self.sunbed_a.id)
+        self.assertEqual(cell["label"], "A1")
+
+    def test_save_adds_sunbed_on_empty_cell(self):
+        save_bar_layout(
+            self.bar,
+            rows=2,
+            cols=2,
+            cells=[
+                {
+                    "row": 0,
+                    "col": 0,
+                    "category_id": self.category.id,
+                    "sunbed_id": self.sunbed_a.id,
+                },
+                {
+                    "row": 0,
+                    "col": 1,
+                    "category_id": self.category.id,
+                    "sunbed_id": self.sunbed_b.id,
+                },
+                {"row": 1, "col": 0, "category_id": self.category.id},
+            ],
+        )
+        self.assertEqual(Sunbed.objects.filter(beach_bar=self.bar).count(), 3)
+        new_bed = Sunbed.objects.get(beach_bar=self.bar, grid_row=1, grid_col=0)
+        self.assertTrue(new_bed.label.startswith("S"))
+
+    def test_save_blocks_removing_active_booking(self):
+        book_sunbeds(self.guest, self.bar, self.book_date, [self.sunbed_a.id])
+        with self.assertRaises(LayoutError) as ctx:
+            save_bar_layout(
+                self.bar,
+                rows=2,
+                cols=2,
+                cells=[
+                    {
+                        "row": 0,
+                        "col": 1,
+                        "category_id": self.category.id,
+                        "sunbed_id": self.sunbed_b.id,
+                    },
+                ],
+            )
+        self.assertEqual(ctx.exception.code, "has_active_bookings")
+
+    def test_save_blocks_moving_active_booking(self):
+        book_sunbeds(self.guest, self.bar, self.book_date, [self.sunbed_a.id])
+        with self.assertRaises(LayoutError) as ctx:
+            save_bar_layout(
+                self.bar,
+                rows=2,
+                cols=2,
+                cells=[
+                    {
+                        "row": 1,
+                        "col": 0,
+                        "category_id": self.category.id,
+                        "sunbed_id": self.sunbed_a.id,
+                    },
+                ],
+            )
+        self.assertEqual(ctx.exception.code, "has_active_bookings")
+
+
+class LayoutApiTests(BookingTestMixin, TestCase):
+    def test_owner_can_get_layout(self):
+        self.client.login(email=self.owner.email, password="testpass123")
+        response = self.client.get(reverse("api_owner_layout"))
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        self.assertIn("rows", data)
+        self.assertIn("cols", data)
+        self.assertIn("categories", data)
+        self.assertIn("cells", data)
+
+    def test_owner_save_layout_round_trip(self):
+        self.client.login(email=self.owner.email, password="testpass123")
+        payload = {
+            "rows": 2,
+            "cols": 2,
+            "cells": [
+                {
+                    "row": 0,
+                    "col": 0,
+                    "category_id": self.category.id,
+                    "sunbed_id": self.sunbed_a.id,
+                },
+                {
+                    "row": 0,
+                    "col": 1,
+                    "category_id": self.category.id,
+                    "sunbed_id": self.sunbed_b.id,
+                },
+                {"row": 1, "col": 0, "category_id": self.category.id},
+            ],
+        }
+        response = self.api_post(self.client, reverse("api_owner_layout"), payload)
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(response.json()["ok"])
+        layout = response.json()["layout"]
+        self.assertIsNotNone(layout["cells"][1][0])
+        self.assertEqual(Sunbed.objects.filter(beach_bar=self.bar).count(), 3)
+
+    def test_guest_cannot_access_layout_api(self):
+        self.login_guest()
+        response = self.client.get(reverse("api_owner_layout"))
+        self.assertEqual(response.status_code, 403)
+
+    def test_save_blocks_active_booking_via_api(self):
+        book_sunbeds(self.guest, self.bar, self.book_date, [self.sunbed_a.id])
+        self.client.login(email=self.owner.email, password="testpass123")
+        response = self.api_post(
+            self.client,
+            reverse("api_owner_layout"),
+            {
+                "rows": 2,
+                "cols": 2,
+                "cells": [
+                    {
+                        "row": 0,
+                        "col": 1,
+                        "category_id": self.category.id,
+                        "sunbed_id": self.sunbed_b.id,
+                    },
+                ],
+            },
+        )
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.json()["code"], "has_active_bookings")
+
+
+class LayoutUiTests(BookingTestMixin, TestCase):
+    def test_layout_tab_renders_editor(self):
+        self.client.login(email=self.owner.email, password="testpass123")
+        page = self.client.get(reverse("owner_dashboard"), {"tab": "layout"})
+        self.assertEqual(page.status_code, 200)
+        self.assertContains(page, 'id="tab-layout"')
+        self.assertContains(page, reverse("api_owner_layout"))
+        self.assertContains(page, 'id="le-grid"')
+        self.assertContains(page, 'id="le-save"')
+        self.assertContains(page, "/static/core/js/layout_editor.js")
+
+    def test_sidebar_includes_layout_link(self):
+        self.client.login(email=self.owner.email, password="testpass123")
+        page = self.client.get(reverse("owner_dashboard"))
+        self.assertContains(page, 'data-tab="layout"')
+        self.assertContains(page, "Layout")
+
+
+class LayoutIntegrationTests(BookingTestMixin, TestCase):
+    def test_saved_layout_appears_on_guest_map(self):
+        owner_client = Client(HTTP_HOST="127.0.0.1")
+        guest_client = Client(HTTP_HOST="127.0.0.1")
+        owner_client.login(email=self.owner.email, password="testpass123")
+
+        save_response = self.api_post(
+            owner_client,
+            reverse("api_owner_layout"),
+            {
+                "rows": 2,
+                "cols": 2,
+                "cells": [
+                    {
+                        "row": 0,
+                        "col": 0,
+                        "category_id": self.category.id,
+                        "sunbed_id": self.sunbed_a.id,
+                    },
+                    {"row": 0, "col": 1, "category_id": self.category.id},
+                ],
+            },
+        )
+        self.assertEqual(save_response.status_code, 200)
+        new_label = save_response.json()["layout"]["cells"][0][1]["label"]
+
+        map_data = guest_client.get(
+            f"{reverse('api_bar_sunbeds', args=[self.bar.id])}?date={self.book_date.isoformat()}"
+        ).json()
+        map_labels = {
+            cell.get("label")
+            for row in map_data["rows"]
+            for cell in row
+            if cell
+        }
+        self.assertIn(new_label, map_labels)
+        self.assertNotIn(self.sunbed_b.label, map_labels)
+
+        beach_page = guest_client.get(
+            reverse("beach_bar", args=[self.bar.id]),
+            {"date": self.book_date.isoformat()},
+        )
+        self.assertContains(beach_page, new_label)
+
+
+class LayoutEdgeCaseTests(BookingTestMixin, TestCase):
+    def test_save_first_layout_on_empty_bar(self):
+        empty_bar = BeachBar.objects.create(
+            owner=self.owner,
+            name="Empty Shore",
+            address="2 Sand Ln",
+            city="Ulcinj",
+            opening_time=time(9, 0),
+            closing_time=time(18, 0),
+        )
+        category = SunbedCategory.objects.create(
+            beach_bar=empty_bar,
+            name="Standard",
+            price=Decimal("10.00"),
+        )
+        payload = save_bar_layout(
+            empty_bar,
+            rows=2,
+            cols=2,
+            cells=[
+                {"row": 0, "col": 0, "category_id": category.id},
+                {"row": 1, "col": 1, "category_id": category.id},
+            ],
+        )
+        self.assertEqual(Sunbed.objects.filter(beach_bar=empty_bar).count(), 2)
+        self.assertIsNotNone(payload["cells"][0][0])
+        self.assertIsNotNone(payload["cells"][1][1])
+
+    def test_edit_preserves_price_at_booking_on_existing_reservation(self):
+        book_sunbeds(self.guest, self.bar, self.book_date, [self.sunbed_a.id])
+        reservation = Reservation.objects.get(sunbed=self.sunbed_a)
+        original_price = reservation.price_at_booking
+
+        save_bar_layout(
+            self.bar,
+            rows=2,
+            cols=2,
+            cells=[
+                {
+                    "row": 0,
+                    "col": 0,
+                    "category_id": self.category.id,
+                    "sunbed_id": self.sunbed_a.id,
+                },
+                {
+                    "row": 0,
+                    "col": 1,
+                    "category_id": self.category.id,
+                    "sunbed_id": self.sunbed_b.id,
+                },
+            ],
+        )
+        update_category_prices(self.bar, {self.category.id: "99.00"})
+        reservation.refresh_from_db()
+        self.assertEqual(reservation.price_at_booking, original_price)
+
+    def test_cannot_remove_sunbed_with_booking_history(self):
+        reservations = book_sunbeds(
+            self.guest, self.bar, self.book_date, [self.sunbed_a.id]
+        )
+        cancel_reservation(self.guest, reservations[0].id)
+        with self.assertRaises(LayoutError) as ctx:
+            save_bar_layout(
+                self.bar,
+                rows=2,
+                cols=2,
+                cells=[
+                    {
+                        "row": 0,
+                        "col": 1,
+                        "category_id": self.category.id,
+                        "sunbed_id": self.sunbed_b.id,
+                    },
+                ],
+            )
+        self.assertEqual(ctx.exception.code, "has_booking_history")
+
+
+class Slice8FlowTests(BookingTestMixin, TestCase):
+    def test_owner_layout_booking_guard_flow(self):
+        owner_client = Client(HTTP_HOST="127.0.0.1")
+        guest_client = Client(HTTP_HOST="127.0.0.1")
+        owner_client.login(email=self.owner.email, password="testpass123")
+
+        save_response = self.api_post(
+            owner_client,
+            reverse("api_owner_layout"),
+            {
+                "rows": 2,
+                "cols": 2,
+                "cells": [
+                    {
+                        "row": 0,
+                        "col": 0,
+                        "category_id": self.category.id,
+                        "sunbed_id": self.sunbed_a.id,
+                    },
+                    {
+                        "row": 0,
+                        "col": 1,
+                        "category_id": self.category.id,
+                        "sunbed_id": self.sunbed_b.id,
+                    },
+                ],
+            },
+        )
+        self.assertEqual(save_response.status_code, 200)
+        labels = {
+            cell["label"]
+            for row in save_response.json()["layout"]["cells"]
+            for cell in row
+            if cell
+        }
+        self.assertEqual(len(labels), 2)
+
+        guest_client.login(email=self.guest.email, password="testpass123")
+        book_response = self.api_post(
+            guest_client,
+            reverse("api_book_sunbeds", args=[self.bar.id]),
+            {
+                "date": self.book_date.isoformat(),
+                "sunbed_ids": [self.sunbed_a.id],
+            },
+        )
+        self.assertEqual(book_response.status_code, 200)
+
+        blocked = self.api_post(
+            owner_client,
+            reverse("api_owner_layout"),
+            {
+                "rows": 2,
+                "cols": 2,
+                "cells": [
+                    {
+                        "row": 0,
+                        "col": 1,
+                        "category_id": self.category.id,
+                        "sunbed_id": self.sunbed_b.id,
+                    },
+                ],
+            },
+        )
+        self.assertEqual(blocked.status_code, 400)
+        self.assertEqual(blocked.json()["code"], "has_active_bookings")
+
+        cancel_reservation(self.guest, book_response.json()["reservations"][0]["id"])
+        still_blocked = self.api_post(
+            owner_client,
+            reverse("api_owner_layout"),
+            {
+                "rows": 2,
+                "cols": 2,
+                "cells": [
+                    {
+                        "row": 0,
+                        "col": 1,
+                        "category_id": self.category.id,
+                        "sunbed_id": self.sunbed_b.id,
+                    },
+                ],
+            },
+        )
+        self.assertEqual(still_blocked.status_code, 400)
+        self.assertEqual(still_blocked.json()["code"], "has_booking_history")
+
+    def test_layout_dashboard_payload_matches_api(self):
+        self.client.login(email=self.owner.email, password="testpass123")
+        page = self.client.get(reverse("owner_dashboard"), {"tab": "layout"})
+        self.assertContains(page, reverse("api_owner_layout"))
+        api_data = self.client.get(reverse("api_owner_layout")).json()
+        self.assertGreaterEqual(api_data["rows"], 1)
+        self.assertIn(self.category.name, str(api_data["categories"]))
+
+
+class LayoutRiskTests(BookingTestMixin, TestCase):
+    """Guards against regressions on validation, relabeling, and booking edge cases."""
+
+    def test_can_change_category_on_active_booked_spot_at_same_cell(self):
+        premium = SunbedCategory.objects.create(
+            beach_bar=self.bar,
+            name="Premium",
+            price=Decimal("40.00"),
+        )
+        book_sunbeds(self.guest, self.bar, self.book_date, [self.sunbed_a.id])
+        reservation = Reservation.objects.get(sunbed=self.sunbed_a)
+
+        save_bar_layout(
+            self.bar,
+            rows=2,
+            cols=2,
+            cells=[
+                {
+                    "row": self.sunbed_a.grid_row,
+                    "col": self.sunbed_a.grid_col,
+                    "category_id": premium.id,
+                    "sunbed_id": self.sunbed_a.id,
+                },
+                {
+                    "row": self.sunbed_b.grid_row,
+                    "col": self.sunbed_b.grid_col,
+                    "category_id": self.category.id,
+                    "sunbed_id": self.sunbed_b.id,
+                },
+            ],
+        )
+
+        self.sunbed_a.refresh_from_db()
+        reservation.refresh_from_db()
+        self.assertEqual(self.sunbed_a.category_id, premium.id)
+        self.assertEqual(reservation.sunbed_id, self.sunbed_a.id)
+        self.assertEqual(reservation.status, ReservationStatus.ACTIVE)
+
+    def test_relabel_assigns_unique_labels_per_category(self):
+        premium = SunbedCategory.objects.create(
+            beach_bar=self.bar,
+            name="Premium",
+            price=Decimal("40.00"),
+        )
+        save_bar_layout(
+            self.bar,
+            rows=2,
+            cols=2,
+            cells=[
+                {
+                    "row": 0,
+                    "col": 0,
+                    "category_id": premium.id,
+                    "sunbed_id": self.sunbed_a.id,
+                },
+                {
+                    "row": 0,
+                    "col": 1,
+                    "category_id": self.category.id,
+                    "sunbed_id": self.sunbed_b.id,
+                },
+                {"row": 1, "col": 0, "category_id": premium.id},
+            ],
+        )
+        labels = list(
+            Sunbed.objects.filter(beach_bar=self.bar).values_list("label", flat=True)
+        )
+        self.assertEqual(len(labels), len(set(labels)))
+        self.assertIn("P1", labels)
+        self.assertIn("P2", labels)
+        self.assertIn("S1", labels)
+
+    def test_rejects_duplicate_cell_position(self):
+        with self.assertRaises(LayoutError) as ctx:
+            save_bar_layout(
+                self.bar,
+                rows=2,
+                cols=2,
+                cells=[
+                    {"row": 0, "col": 0, "category_id": self.category.id},
+                    {"row": 0, "col": 0, "category_id": self.category.id},
+                ],
+            )
+        self.assertEqual(ctx.exception.code, "invalid_cells")
+
+    def test_rejects_cell_outside_grid_bounds(self):
+        with self.assertRaises(LayoutError) as ctx:
+            save_bar_layout(
+                self.bar,
+                rows=2,
+                cols=2,
+                cells=[{"row": 2, "col": 0, "category_id": self.category.id}],
+            )
+        self.assertEqual(ctx.exception.code, "invalid_cells")
+
+    def test_rejects_invalid_grid_size(self):
+        with self.assertRaises(LayoutError) as ctx:
+            save_bar_layout(
+                self.bar,
+                rows=13,
+                cols=10,
+                cells=[{"row": 0, "col": 0, "category_id": self.category.id}],
+            )
+        self.assertEqual(ctx.exception.code, "invalid_grid")
+
+    def test_rejects_foreign_category_id(self):
+        other_bar = BeachBar.objects.create(
+            owner=self.owner,
+            name="Other Bar",
+            address="9 Pier",
+            city="Kotor",
+            opening_time=time(8, 0),
+            closing_time=time(20, 0),
+        )
+        foreign_category = SunbedCategory.objects.create(
+            beach_bar=other_bar,
+            name="Standard",
+            price=Decimal("20.00"),
+        )
+        with self.assertRaises(LayoutError) as ctx:
+            save_bar_layout(
+                self.bar,
+                rows=2,
+                cols=2,
+                cells=[{"row": 0, "col": 0, "category_id": foreign_category.id}],
+            )
+        self.assertEqual(ctx.exception.code, "invalid_category")
+
+    def test_rejects_duplicate_sunbed_id_in_payload(self):
+        with self.assertRaises(LayoutError) as ctx:
+            save_bar_layout(
+                self.bar,
+                rows=2,
+                cols=2,
+                cells=[
+                    {
+                        "row": 0,
+                        "col": 0,
+                        "category_id": self.category.id,
+                        "sunbed_id": self.sunbed_a.id,
+                    },
+                    {
+                        "row": 1,
+                        "col": 0,
+                        "category_id": self.category.id,
+                        "sunbed_id": self.sunbed_a.id,
+                    },
+                ],
+            )
+        self.assertEqual(ctx.exception.code, "invalid_cells")
+
+    def test_save_empty_cells_removes_unbooked_sunbeds(self):
+        save_bar_layout(
+            self.bar,
+            rows=2,
+            cols=2,
+            cells=[
+                {
+                    "row": 0,
+                    "col": 0,
+                    "category_id": self.category.id,
+                    "sunbed_id": self.sunbed_a.id,
+                },
+            ],
+        )
+        self.assertFalse(Sunbed.objects.filter(id=self.sunbed_b.id).exists())
+        self.assertTrue(Sunbed.objects.filter(id=self.sunbed_a.id).exists())
+
+    def test_layout_api_rejects_invalid_json(self):
+        self.client.login(email=self.owner.email, password="testpass123")
+        response = self.client.post(
+            reverse("api_owner_layout"),
+            data="not json",
+            content_type="application/json",
+        )
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.json()["code"], "invalid_json")
+
+    def test_layout_api_rejects_missing_cells(self):
+        self.client.login(email=self.owner.email, password="testpass123")
+        response = self.api_post(
+            self.client,
+            reverse("api_owner_layout"),
+            {"rows": 2, "cols": 2},
+        )
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.json()["code"], "invalid_cells")
+
+    def test_active_booking_still_bookable_after_layout_relabel(self):
+        book_sunbeds(self.guest, self.bar, self.book_date, [self.sunbed_a.id])
+        reservation = Reservation.objects.get(sunbed=self.sunbed_a)
+        original_sunbed_id = reservation.sunbed_id
+
+        save_bar_layout(
+            self.bar,
+            rows=2,
+            cols=2,
+            cells=[
+                {
+                    "row": 0,
+                    "col": 0,
+                    "category_id": self.category.id,
+                    "sunbed_id": self.sunbed_a.id,
+                },
+                {
+                    "row": 0,
+                    "col": 1,
+                    "category_id": self.category.id,
+                    "sunbed_id": self.sunbed_b.id,
+                },
+            ],
+        )
+
+        reservation.refresh_from_db()
+        self.sunbed_a.refresh_from_db()
+        self.assertEqual(reservation.sunbed_id, original_sunbed_id)
+        self.assertEqual(self.sunbed_a.label, "S1")
+
+        map_data = get_sunbed_map_payload(self.bar, self.book_date)
+        booked = [
+            cell
+            for row in map_data["rows"]
+            for cell in row
+            if cell and cell.get("id") == self.sunbed_a.id
+        ]
+        self.assertEqual(len(booked), 1)
+        self.assertTrue(booked[0]["is_taken"])
