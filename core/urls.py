@@ -13,6 +13,18 @@ urlpatterns = [
         api.cancel_reservation_api,
         name="api_cancel_reservation",
     ),
+    path("api/owner/pricing/", api.owner_update_pricing, name="api_owner_pricing"),
+    path("api/owner/bundles/", api.owner_create_bundle, name="api_owner_create_bundle"),
+    path(
+        "api/owner/bundles/<int:bundle_id>/",
+        api.owner_update_bundle,
+        name="api_owner_update_bundle",
+    ),
+    path(
+        "api/owner/bundles/<int:bundle_id>/toggle/",
+        api.owner_toggle_bundle,
+        name="api_owner_toggle_bundle",
+    ),
     path("login/", auth.login_page, name="login"),
     path("register/", auth.register_page, name="register"),
     path("logout/", auth.logout_page, name="logout"),

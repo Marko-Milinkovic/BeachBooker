@@ -96,6 +96,8 @@ Auth uses Django sessions (cookie-based). Register at `/register/` or log in at 
 2. **Overview** — bookings, revenue, occupancy, and zone fill for a selected date.
 3. **Reservations** — all guest bookings for your bar; filter by date and status.
 4. **Cancel** an active guest booking; the spot becomes free on the guest map.
+5. **Pricing** — edit per-category sunbed prices; new bookings snapshot the updated price.
+6. **Bundles** — create, edit, and enable/disable add-on bundles (guest checkout in a later slice).
 
 **Run tests**
 

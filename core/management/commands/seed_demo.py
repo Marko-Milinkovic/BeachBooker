@@ -8,6 +8,7 @@ from core.models import (
     Amenity,
     BeachBar,
     BeachBarAmenity,
+    Bundle,
     Reservation,
     ReservationStatus,
     Sunbed,
@@ -134,11 +135,19 @@ class Command(BaseCommand):
             tomorrow,
             blue_categories,
         )
+        bundles = self._ensure_bundles(
+            blue,
+            [
+                ("Drinks Package", "Two welcome drinks at the bar", Decimal("8.00")),
+                ("Parking", "Reserved spot near the entrance", Decimal("5.00")),
+            ],
+        )
 
         self.stdout.write(self.style.SUCCESS("Demo data ready."))
         self.stdout.write(f"  Users: owner, guest, admin @beachbooker.test / {DEMO_PASSWORD}")
         self.stdout.write(f"  Beach bars: {BeachBar.objects.count()}")
         self.stdout.write(f"  Sunbeds: {Sunbed.objects.count()}")
+        self.stdout.write(f"  Bundles: {bundles}")
         self.stdout.write(f"  Active reservations (tomorrow): {reservations}")
 
     def _ensure_user(self, email, first_name, last_name, role, reset_password):
@@ -217,6 +226,22 @@ class Command(BaseCommand):
                     "user": guest,
                     "status": ReservationStatus.ACTIVE,
                     "price_at_booking": category.price if hasattr(category, "price") else bed.category.price,
+                },
+            )
+            if created:
+                count += 1
+        return count
+
+    def _ensure_bundles(self, bar, bundle_specs):
+        count = 0
+        for name, description, price in bundle_specs:
+            _, created = Bundle.objects.get_or_create(
+                beach_bar=bar,
+                name=name,
+                defaults={
+                    "description": description,
+                    "price": price,
+                    "is_active": True,
                 },
             )
             if created:

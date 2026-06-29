@@ -8,7 +8,28 @@
 .dash__head{margin-bottom:28px}
 .dash__head--split{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px}
 .dash__title{font-size:1.75rem;font-weight:800;letter-spacing:-.03em;color:var(--text);margin:0}
+.dash__sub{max-width:560px;color:var(--text-2);font-size:.9375rem;margin:8px 0 0}
 .dash-date-form{display:flex;align-items:center;gap:8px}
+.dash-form-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:20px}
+.field{margin-bottom:16px}
+.field label{display:block;font-size:.8125rem;font-weight:600;color:var(--text-2);margin-bottom:6px}
+.price-input{display:inline-flex;align-items:center;border:1px solid var(--border);border-radius:var(--r-md);background:var(--surface);overflow:hidden;min-width:100px}
+.price-input__cur{padding:6px 0 6px 10px;font-size:.875rem;font-weight:600;color:var(--text-3)}
+.price-input__field{border:none;outline:none;width:80px;padding:6px 8px;font-size:.875rem;font-weight:700;color:var(--text);background:transparent;font-family:inherit}
+.bundle-list{display:flex;flex-direction:column;gap:12px;margin-bottom:24px}
+.bundle-row{display:flex;align-items:center;gap:14px;padding:16px 18px;border:1px solid var(--border);border-radius:var(--r-md);background:var(--surface)}
+.bundle-row--off{opacity:.55}
+.bundle-row__info{flex:1;min-width:0}
+.bundle-row__name{font-weight:600}
+.bundle-row__desc{font-size:.8125rem;color:var(--text-2);margin-top:2px}
+.bundle-row__price{font-weight:800;font-size:1.125rem;margin-right:8px}
+.toggle{display:inline-flex;cursor:pointer;flex-shrink:0}
+.toggle input{display:none}
+.toggle__track{width:40px;height:22px;background:var(--border-2);border-radius:var(--r-full);position:relative;transition:background .2s var(--ease)}
+.toggle__thumb{position:absolute;top:2px;left:2px;width:18px;height:18px;background:#fff;border-radius:50%;box-shadow:0 1px 3px rgba(0,0,0,.15);transition:transform .2s var(--ease)}
+.toggle input:checked+.toggle__track{background:var(--teal)}
+.toggle input:checked+.toggle__track .toggle__thumb{transform:translateX(18px)}
+.bundle-form .card__title{margin-bottom:20px}
 .stats{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:24px}
 @media (max-width:900px){.stats{grid-template-columns:repeat(2,1fr)}}
 .stat{background:var(--surface);border:1px solid var(--border);border-radius:var(--r-lg);padding:20px;box-shadow:var(--shadow-card)}

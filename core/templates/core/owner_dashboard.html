@@ -116,4 +116,106 @@
     </table>
   </div>
 </section>
+
+<section id="tab-pricing" class="dash-panel"{% if active_tab != 'pricing' %} style="display:none"{% endif %}
+         data-pricing-url="{% url 'api_owner_pricing' %}">
+  <div class="dash__head">
+    <h1 class="dash__title">Category pricing</h1>
+    <p class="dash__sub">Set the price per spot for each zone. New bookings use these rates.</p>
+  </div>
+
+  <div class="card">
+    <table class="tbl">
+      <thead>
+        <tr>
+          <th>Category</th>
+          <th>Price / spot / day</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for category in categories %}
+        <tr>
+          <td><strong>{{ category.name }}</strong></td>
+          <td>
+            <div class="price-input">
+              <span class="price-input__cur">&euro;</span>
+              <input type="number"
+                     class="price-input__field pricing-category-price"
+                     min="0"
+                     step="0.01"
+                     data-category-id="{{ category.id }}"
+                     value="{{ category.price|floatformat:2 }}">
+            </div>
+          </td>
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="2" class="tbl__empty">No categories configured.</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% if categories %}
+    <div class="dash-form-actions">
+      <button type="button" class="btn btn--teal btn--pill" id="save-pricing-btn">Save prices</button>
+    </div>
+    {% endif %}
+  </div>
+</section>
+
+<section id="tab-bundles" class="dash-panel"{% if active_tab != 'bundles' %} style="display:none"{% endif %}
+         data-create-bundle-url="{% url 'api_owner_create_bundle' %}">
+  <div class="dash__head dash__head--split">
+    <div>
+      <h1 class="dash__title">Bundles &amp; add-ons</h1>
+      <p class="dash__sub">Extras guests can add when booking (guest checkout comes in the next slice).</p>
+    </div>
+    <button type="button" class="btn btn--teal btn--pill" id="new-bundle-btn">+ New bundle</button>
+  </div>
+
+  <div class="bundle-list" id="bundle-list">
+    {% for bundle in bundles %}
+    <article class="bundle-row{% if not bundle.is_active %} bundle-row--off{% endif %}"
+             data-bundle-id="{{ bundle.id }}"
+             data-update-url="{% url 'api_owner_update_bundle' bundle.id %}"
+             data-toggle-url="{% url 'api_owner_toggle_bundle' bundle.id %}">
+      <div class="bundle-row__info">
+        <div class="bundle-row__name">{{ bundle.name }}</div>
+        {% if bundle.description %}
+        <div class="bundle-row__desc">{{ bundle.description }}</div>
+        {% endif %}
+      </div>
+      <span class="bundle-row__price">&euro;{{ bundle.price|floatformat:0 }}</span>
+      <label class="toggle" title="Active on booking page">
+        <input type="checkbox" class="bundle-active-toggle"{% if bundle.is_active %} checked{% endif %}>
+        <span class="toggle__track"><span class="toggle__thumb"></span></span>
+      </label>
+      <button type="button" class="btn btn--outline btn--sm btn--pill edit-bundle-btn">Edit</button>
+    </article>
+    {% empty %}
+    <p class="tbl__empty" id="bundle-empty">No bundles yet. Create one to offer add-ons.</p>
+    {% endfor %}
+  </div>
+
+  <form id="bundle-form" class="card bundle-form" style="display:none">
+    <h2 class="card__title" id="bundle-form-title">New bundle</h2>
+    <input type="hidden" id="bundle-form-id" value="">
+    <div class="field">
+      <label for="bundle-name">Name</label>
+      <input type="text" id="bundle-name" class="input" required maxlength="120">
+    </div>
+    <div class="field">
+      <label for="bundle-description">Description</label>
+      <input type="text" id="bundle-description" class="input" maxlength="255">
+    </div>
+    <div class="field">
+      <label for="bundle-price">Price (&euro;)</label>
+      <input type="number" id="bundle-price" class="input" min="0" step="0.01" required>
+    </div>
+    <div class="dash-form-actions">
+      <button type="button" class="btn btn--ghost btn--pill" id="bundle-form-cancel">Cancel</button>
+      <button type="submit" class="btn btn--teal btn--pill">Save bundle</button>
+    </div>
+  </form>
+</section>
 {% endblock %}

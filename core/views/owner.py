@@ -4,7 +4,10 @@ from django.contrib.auth.decorators import login_required
 from django.shortcuts import redirect, render
 
 from core.models import UserRole
+
+OWNER_TABS = ("overview", "reservations", "pricing", "bundles")
 from core.services.beach_bar import parse_filter_date
+from core.services.bundles import list_bundles
 from core.services.owner import (
     get_bar_reservations,
     get_dashboard_overview,
@@ -37,7 +40,7 @@ def dashboard(request):
     filter_date = parse_filter_date(request.GET.get("date"))
     status_filter = request.GET.get("status", "").strip()
     active_tab = request.GET.get("tab", "overview")
-    if active_tab not in ("overview", "reservations"):
+    if active_tab not in OWNER_TABS:
         active_tab = "overview"
 
     overview = get_dashboard_overview(request.owner_bar, filter_date)
@@ -47,6 +50,10 @@ def dashboard(request):
         filter_date=res_filter_date,
         status=status_filter,
     )
+    categories = list(
+        request.owner_bar.sunbed_categories.order_by("price", "name")
+    )
+    bundles = list_bundles(request.owner_bar)
 
     return render(
         request,
@@ -59,6 +66,8 @@ def dashboard(request):
             "active_tab": active_tab,
             "overview": overview,
             "reservations": reservations,
+            "categories": categories,
+            "bundles": bundles,
             "today": filter_date,
         },
     )
