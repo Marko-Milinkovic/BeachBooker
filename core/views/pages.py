@@ -1,50 +1,25 @@
 from datetime import date
 
 from django.contrib.auth.decorators import login_required
-from django.db.models import Avg, Count, Min
 from django.shortcuts import get_object_or_404, render
 
 from core.models import BeachBar, Reservation, ReservationStatus
 from core.services.beach_bar import (
-    bar_image_url,
     get_beach_bar_page_context,
     parse_filter_date,
+)
+from core.services.explore import (
+    ExploreError,
+    amenity_ids_from_querydict,
+    list_amenities,
+    parse_price_bound,
+    parse_sort,
+    search_bars,
 )
 from core.services.reservations import (
     get_reservation_line_total,
     mark_past_reservations_completed,
 )
-
-
-def get_explore_bars(city="", filter_date=None):
-    if filter_date is None:
-        filter_date = date.today()
-
-    bars = BeachBar.objects.annotate(
-        min_price=Min("sunbed_categories__price"),
-        total_spots=Count("sunbeds", distinct=True),
-        avg_rating=Avg("reviews__rating"),
-    ).order_by("name")
-
-    if city:
-        bars = bars.filter(city__icontains=city)
-
-    result = []
-    for bar in bars.distinct():
-        reserved = (
-            Reservation.objects.filter(
-                sunbed__beach_bar=bar,
-                reservation_date=filter_date,
-                status=ReservationStatus.ACTIVE,
-            )
-            .values("sunbed_id")
-            .distinct()
-            .count()
-        )
-        bar.free_spots = max(bar.total_spots - reserved, 0)
-        bar.image_url = bar_image_url(bar)
-        result.append(bar)
-    return result, filter_date
 
 
 def index(request):
@@ -54,7 +29,32 @@ def index(request):
 def explore(request):
     city = request.GET.get("city", "").strip()
     filter_date = parse_filter_date(request.GET.get("date"))
-    bars, filter_date = get_explore_bars(city, filter_date)
+    amenity_ids = []
+    min_price = None
+    max_price = None
+    sort = "name"
+    try:
+        amenity_ids = amenity_ids_from_querydict(request.GET)
+        min_price = parse_price_bound(request.GET.get("min_price"), "min_price")
+        max_price = parse_price_bound(request.GET.get("max_price"), "max_price")
+        sort = parse_sort(request.GET.get("sort"))
+    except ExploreError:
+        amenity_ids = []
+        min_price = None
+        max_price = None
+        sort = "name"
+
+    bars = search_bars(
+        city=city,
+        filter_date=filter_date,
+        amenity_ids=amenity_ids,
+        min_price=min_price,
+        max_price=max_price,
+        sort=sort,
+    )
+    amenities = list_amenities()
+    selected_amenities = set(amenity_ids)
+
     return render(
         request,
         "core/explore.html",
@@ -65,6 +65,11 @@ def explore(request):
             "city": city,
             "bar_count": len(bars),
             "today": date.today(),
+            "amenities": amenities,
+            "selected_amenities": selected_amenities,
+            "min_price": request.GET.get("min_price", ""),
+            "max_price": request.GET.get("max_price", ""),
+            "sort": sort,
         },
     )
 
@@ -123,4 +128,3 @@ def my_reservations(request):
             ),
         },
     )
-

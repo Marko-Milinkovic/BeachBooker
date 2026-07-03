@@ -1,4 +1,5 @@
 {% extends "core/base.html" %}
+{% load static %}
 
 {% block title %}Explore beach bars — BeachBooker{% endblock %}
 
@@ -10,9 +11,12 @@
 
 <section class="section section--alt" style="padding-top:40px;padding-bottom:96px">
   <div class="container">
-    <div class="explore">
+    <div class="explore"
+         id="explore-app"
+         data-api-url="{% url 'api_explore_bars' %}"
+         data-today="{{ today|date:'Y-m-d' }}">
       <aside class="filters">
-        <form method="get" action="{% url 'explore' %}">
+        <form id="explore-filters" method="get" action="{% url 'explore' %}">
           <div class="filters__title">Filters</div>
 
           <div class="filters__group">
@@ -25,32 +29,73 @@
             <input id="filter-date" name="date" type="date" class="input" value="{{ filter_date|date:'Y-m-d' }}">
           </div>
 
-          <button type="submit" class="btn btn--teal btn--pill" style="width:100%">Apply</button>
-          <a href="{% url 'explore' %}" class="btn btn--ghost btn--pill" style="width:100%;margin-top:8px;font-size:.8125rem;text-align:center;display:block">Clear all</a>
+          <div class="filters__group">
+            <span class="filters__group-label">Price range (&euro; / spot)</span>
+            <div class="filters__price-row">
+              <div class="field">
+                <label for="price-min">Min</label>
+                <input id="price-min" name="min_price" type="number" class="input" placeholder="0" min="0" step="0.01" value="{{ min_price }}">
+              </div>
+              <div class="field">
+                <label for="price-max">Max</label>
+                <input id="price-max" name="max_price" type="number" class="input" placeholder="50" min="0" step="0.01" value="{{ max_price }}">
+              </div>
+            </div>
+          </div>
+
+          {% if amenities %}
+          <div class="filters__group">
+            <span class="filters__group-label">Amenities</span>
+            <div class="filters__checkboxes" id="amenity-filters">
+              {% for amenity in amenities %}
+              <label class="checkbox">
+                <input type="checkbox"
+                       name="amenity_ids"
+                       value="{{ amenity.id }}"
+                       class="explore-amenity"{% if amenity.id in selected_amenities %} checked{% endif %}>
+                {{ amenity.name }}
+              </label>
+              {% endfor %}
+            </div>
+          </div>
+          {% endif %}
+
+          <button type="submit" class="btn btn--teal btn--pill" style="width:100%" id="explore-apply">Apply</button>
+          <button type="button" class="btn btn--ghost btn--pill" style="width:100%;margin-top:8px;font-size:.8125rem" id="explore-clear">Clear all</button>
         </form>
       </aside>
 
       <div>
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px">
-          <span style="font-size:.9375rem;color:var(--text-2);font-weight:500"><strong style="color:var(--text)">{{ bar_count }}</strong> beach bar{{ bar_count|pluralize }} found</span>
+        <div class="explore__toolbar">
+          <span class="explore__count" id="explore-count"><strong>{{ bar_count }}</strong> beach bar{{ bar_count|pluralize }} found</span>
+          <label class="sr-only" for="explore-sort">Sort</label>
+          <select id="explore-sort" name="sort" class="input explore__sort" form="explore-filters">
+            <option value="name"{% if sort == 'name' %} selected{% endif %}>Sort by: Name</option>
+            <option value="price_asc"{% if sort == 'price_asc' %} selected{% endif %}>Price: Low to high</option>
+            <option value="price_desc"{% if sort == 'price_desc' %} selected{% endif %}>Price: High to low</option>
+            <option value="rating_desc"{% if sort == 'rating_desc' %} selected{% endif %}>Rating: Highest</option>
+          </select>
         </div>
 
-        {% if bars %}
-        <div class="g g-2">
+        <div class="g g-2" id="explore-results">
           {% for bar in bars %}
             {% include "core/partials/beach_card.html" %}
+          {% empty %}
           {% endfor %}
         </div>
-        {% else %}
-        <div style="text-align:center;padding:64px 24px">
+
+        <div id="explore-empty"{% if bars %} style="display:none"{% endif %} class="explore__empty">
           <svg width="48" height="48" fill="none" stroke="var(--text-3)" stroke-width="1.5" viewBox="0 0 24 24" style="margin:0 auto 16px"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
           <h3 style="font-size:1.125rem;font-weight:700;margin-bottom:6px">No beach bars found</h3>
           <p style="color:var(--text-2);font-size:.9375rem;margin-bottom:20px">Try adjusting your filters or searching a different location.</p>
-          <a href="{% url 'explore' %}" class="btn btn--outline btn--pill">Clear filters</a>
+          <button type="button" class="btn btn--outline btn--pill" id="explore-empty-clear">Clear filters</button>
         </div>
-        {% endif %}
       </div>
     </div>
   </div>
 </section>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'core/js/explore.js' %}?v={{ APP_JS_VERSION }}"></script>
 {% endblock %}

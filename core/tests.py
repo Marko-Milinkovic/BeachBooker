@@ -6,11 +6,14 @@ from django.test import Client, TestCase
 from django.urls import reverse
 
 from core.models import (
+    Amenity,
     BeachBar,
+    BeachBarAmenity,
     Bundle,
     Reservation,
     ReservationBundle,
     ReservationStatus,
+    Review,
     Sunbed,
     SunbedCategory,
     User,
@@ -30,6 +33,17 @@ from core.services.owner import (
     assert_owner_of_bar,
     get_dashboard_overview,
     get_owner_bar,
+)
+from core.services.explore import (
+    ExploreError,
+    amenity_ids_from_querydict,
+    list_amenities,
+    parse_amenity_ids,
+    parse_price_bound,
+    parse_sort,
+    search_bars,
+    search_bars_payload,
+    serialize_bar,
 )
 from core.services.layout import (
     LayoutError,
@@ -2008,3 +2022,369 @@ class LayoutRiskTests(BookingTestMixin, TestCase):
         ]
         self.assertEqual(len(booked), 1)
         self.assertTrue(booked[0]["is_taken"])
+
+
+class ExploreTestMixin(BookingTestMixin):
+    @classmethod
+    def setUpTestData(cls):
+        super().setUpTestData()
+        cls.parking = Amenity.objects.create(name="Parking")
+        cls.wifi = Amenity.objects.create(name="Wi-Fi")
+        cls.showers = Amenity.objects.create(name="Showers")
+        BeachBarAmenity.objects.create(beach_bar=cls.bar, amenity=cls.parking)
+        BeachBarAmenity.objects.create(beach_bar=cls.bar, amenity=cls.wifi)
+
+        cls.other_bar = BeachBar.objects.create(
+            owner=cls.owner,
+            name="Aqua Cove",
+            address="2 Pier",
+            city="Bar",
+            opening_time=time(9, 0),
+            closing_time=time(19, 0),
+        )
+        cls.other_category = SunbedCategory.objects.create(
+            beach_bar=cls.other_bar,
+            name="Standard",
+            price=Decimal("12.00"),
+        )
+        cls.other_sunbed = Sunbed.objects.create(
+            beach_bar=cls.other_bar,
+            category=cls.other_category,
+            label="A1",
+            grid_row=0,
+            grid_col=0,
+        )
+        BeachBarAmenity.objects.create(beach_bar=cls.other_bar, amenity=cls.parking)
+
+        cls.empty_bar = BeachBar.objects.create(
+            owner=cls.owner,
+            name="Bare Shore",
+            address="3 Sand",
+            city="Ulcinj",
+            opening_time=time(8, 0),
+            closing_time=time(18, 0),
+        )
+
+
+class ExploreServiceTests(ExploreTestMixin, TestCase):
+    def test_list_amenities_sorted_by_name(self):
+        names = [item["name"] for item in list_amenities()]
+        self.assertEqual(names, sorted(names))
+        self.assertIn("Parking", names)
+
+    def test_search_filters_by_city(self):
+        bars = search_bars(city="Budva", filter_date=self.book_date)
+        names = {bar.name for bar in bars}
+        self.assertIn(self.bar.name, names)
+        self.assertNotIn(self.other_bar.name, names)
+
+    def test_search_amenity_and_requires_all_selected(self):
+        both = search_bars(
+            filter_date=self.book_date,
+            amenity_ids=[self.parking.id, self.wifi.id],
+        )
+        names = {bar.name for bar in both}
+        self.assertIn(self.bar.name, names)
+        self.assertNotIn(self.other_bar.name, names)
+
+        parking_only = search_bars(
+            filter_date=self.book_date,
+            amenity_ids=[self.parking.id],
+        )
+        parking_names = {bar.name for bar in parking_only}
+        self.assertIn(self.bar.name, parking_names)
+        self.assertIn(self.other_bar.name, parking_names)
+
+    def test_search_filters_by_min_and_max_price(self):
+        cheap = search_bars(
+            filter_date=self.book_date,
+            max_price=Decimal("15.00"),
+        )
+        cheap_names = {bar.name for bar in cheap}
+        self.assertIn(self.other_bar.name, cheap_names)
+        self.assertNotIn(self.bar.name, cheap_names)
+
+        expensive = search_bars(
+            filter_date=self.book_date,
+            min_price=Decimal("20.00"),
+        )
+        expensive_names = {bar.name for bar in expensive}
+        self.assertIn(self.bar.name, expensive_names)
+        self.assertNotIn(self.other_bar.name, expensive_names)
+
+    def test_search_sort_by_price_asc(self):
+        bars = search_bars(filter_date=self.book_date, sort="price_asc")
+        priced = [bar for bar in bars if bar.min_price is not None]
+        prices = [bar.min_price for bar in priced]
+        self.assertEqual(prices, sorted(prices))
+
+    def test_search_sort_by_rating_desc(self):
+        Review.objects.create(
+            user=self.guest,
+            beach_bar=self.other_bar,
+            rating=5,
+            review_text="Great",
+        )
+        Review.objects.create(
+            user=self.guest,
+            beach_bar=self.bar,
+            rating=3,
+            review_text="Ok",
+        )
+        bars = search_bars(filter_date=self.book_date, sort="rating_desc")
+        rated = [bar for bar in bars if bar.avg_rating is not None]
+        self.assertGreaterEqual(rated[0].avg_rating, rated[1].avg_rating)
+
+    def test_free_spots_reflect_active_bookings(self):
+        book_sunbeds(self.guest, self.bar, self.book_date, [self.sunbed_a.id])
+        bars = search_bars(city="Budva", filter_date=self.book_date)
+        self.assertEqual(len(bars), 1)
+        self.assertEqual(bars[0].free_spots, 1)
+
+    def test_zero_free_spots_still_listed(self):
+        book_sunbeds(
+            self.guest,
+            self.bar,
+            self.book_date,
+            [self.sunbed_a.id, self.sunbed_b.id],
+        )
+        bars = search_bars(city="Budva", filter_date=self.book_date)
+        self.assertEqual(len(bars), 1)
+        self.assertEqual(bars[0].free_spots, 0)
+
+    def test_serialize_bar_payload_shape(self):
+        bars = search_bars(city="Budva", filter_date=self.book_date)
+        payload = serialize_bar(bars[0], self.book_date)
+        self.assertEqual(payload["id"], self.bar.id)
+        self.assertEqual(payload["name"], self.bar.name)
+        self.assertEqual(payload["city"], self.bar.city)
+        self.assertEqual(payload["min_price"], "25.00")
+        self.assertEqual(payload["free_spots"], 2)
+        self.assertIn(f"/bars/{self.bar.id}/", payload["url"])
+        self.assertIn(self.book_date.isoformat(), payload["url"])
+
+    def test_parse_helpers_reject_invalid_input(self):
+        with self.assertRaises(ExploreError) as ctx:
+            parse_amenity_ids("x")
+        self.assertEqual(ctx.exception.code, "invalid_amenities")
+
+        with self.assertRaises(ExploreError) as ctx:
+            parse_price_bound("-1", "min_price")
+        self.assertEqual(ctx.exception.code, "invalid_price")
+
+        with self.assertRaises(ExploreError) as ctx:
+            parse_sort("popular")
+        self.assertEqual(ctx.exception.code, "invalid_sort")
+
+    def test_amenity_ids_from_querydict_supports_csv_and_list(self):
+        from django.http import QueryDict
+
+        csv_q = QueryDict(f"amenity_ids={self.parking.id},{self.wifi.id}")
+        self.assertEqual(
+            amenity_ids_from_querydict(csv_q),
+            [self.parking.id, self.wifi.id],
+        )
+        list_q = QueryDict(mutable=True)
+        list_q.setlist("amenity_ids", [str(self.parking.id), str(self.wifi.id)])
+        self.assertEqual(
+            amenity_ids_from_querydict(list_q),
+            [self.parking.id, self.wifi.id],
+        )
+
+
+class ExploreApiTests(ExploreTestMixin, TestCase):
+    def test_explore_api_returns_bars(self):
+        response = self.client.get(reverse("api_explore_bars"))
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        self.assertIn("count", data)
+        self.assertIn("bars", data)
+        self.assertIn("date", data)
+        self.assertGreaterEqual(data["count"], 2)
+
+    def test_explore_api_filters_city(self):
+        response = self.client.get(
+            reverse("api_explore_bars"),
+            {"city": "Budva"},
+        )
+        data = response.json()
+        names = {bar["name"] for bar in data["bars"]}
+        self.assertEqual(names, {self.bar.name})
+
+    def test_explore_api_filters_amenities_and(self):
+        response = self.client.get(
+            reverse("api_explore_bars"),
+            {"amenity_ids": f"{self.parking.id},{self.wifi.id}"},
+        )
+        names = {bar["name"] for bar in response.json()["bars"]}
+        self.assertIn(self.bar.name, names)
+        self.assertNotIn(self.other_bar.name, names)
+
+    def test_explore_api_filters_price(self):
+        response = self.client.get(
+            reverse("api_explore_bars"),
+            {"max_price": "15"},
+        )
+        names = {bar["name"] for bar in response.json()["bars"]}
+        self.assertIn(self.other_bar.name, names)
+        self.assertNotIn(self.bar.name, names)
+
+    def test_explore_api_sort_price_asc(self):
+        response = self.client.get(
+            reverse("api_explore_bars"),
+            {"sort": "price_asc"},
+        )
+        priced = [
+            Decimal(bar["min_price"])
+            for bar in response.json()["bars"]
+            if bar["min_price"] is not None
+        ]
+        self.assertEqual(priced, sorted(priced))
+
+    def test_explore_api_rejects_invalid_price(self):
+        response = self.client.get(
+            reverse("api_explore_bars"),
+            {"min_price": "nope"},
+        )
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.json()["code"], "invalid_price")
+
+    def test_explore_api_rejects_invalid_sort(self):
+        response = self.client.get(
+            reverse("api_explore_bars"),
+            {"sort": "popular"},
+        )
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.json()["code"], "invalid_sort")
+
+    def test_explore_api_public_no_auth_required(self):
+        response = self.client.get(reverse("api_explore_bars"))
+        self.assertEqual(response.status_code, 200)
+
+
+class ExploreUiTests(ExploreTestMixin, TestCase):
+    def test_explore_page_renders_filters_and_script(self):
+        response = self.client.get(reverse("explore"))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'id="explore-app"')
+        self.assertContains(response, reverse("api_explore_bars"))
+        self.assertContains(response, 'id="price-min"')
+        self.assertContains(response, 'id="price-max"')
+        self.assertContains(response, 'id="explore-sort"')
+        self.assertContains(response, "/static/core/js/explore.js")
+        self.assertContains(response, "Parking")
+        self.assertContains(response, "Wi-Fi")
+
+    def test_explore_page_server_renders_city_filter(self):
+        response = self.client.get(reverse("explore"), {"city": "Budva"})
+        self.assertContains(response, self.bar.name)
+        self.assertNotContains(response, self.other_bar.name)
+
+    def test_explore_page_server_renders_amenity_selection(self):
+        response = self.client.get(
+            reverse("explore"),
+            {"amenity_ids": [self.parking.id, self.wifi.id]},
+        )
+        self.assertContains(response, self.bar.name)
+        self.assertNotContains(response, self.other_bar.name)
+        self.assertContains(
+            response,
+            f'value="{self.wifi.id}"',
+        )
+        self.assertContains(response, "checked")
+
+
+class ExploreEdgeCaseTests(ExploreTestMixin, TestCase):
+    def test_bar_without_categories_excluded_from_price_filter(self):
+        bars = search_bars(
+            filter_date=self.book_date,
+            min_price=Decimal("1.00"),
+        )
+        names = {bar.name for bar in bars}
+        self.assertNotIn(self.empty_bar.name, names)
+
+        all_bars = search_bars(filter_date=self.book_date)
+        all_names = {bar.name for bar in all_bars}
+        self.assertIn(self.empty_bar.name, all_names)
+        empty = next(bar for bar in all_bars if bar.id == self.empty_bar.id)
+        self.assertIsNone(empty.min_price)
+
+    def test_bar_without_amenities_fails_amenity_filter(self):
+        bars = search_bars(
+            filter_date=self.book_date,
+            amenity_ids=[self.parking.id],
+        )
+        names = {bar.name for bar in bars}
+        self.assertNotIn(self.empty_bar.name, names)
+
+    def test_unknown_amenity_id_returns_empty(self):
+        bars = search_bars(
+            filter_date=self.book_date,
+            amenity_ids=[999999],
+        )
+        self.assertEqual(bars, [])
+
+    def test_invalid_date_falls_back_to_today_in_payload(self):
+        payload = search_bars_payload(city="Budva", filter_date=None)
+        self.assertEqual(payload["date"], date.today().isoformat())
+
+
+class Slice9FlowTests(ExploreTestMixin, TestCase):
+    def test_explore_filter_flow_city_amenity_and_date(self):
+        book_sunbeds(self.guest, self.bar, self.book_date, [self.sunbed_a.id])
+
+        response = self.client.get(
+            reverse("api_explore_bars"),
+            {
+                "city": "Budva",
+                "amenity_ids": f"{self.parking.id},{self.wifi.id}",
+                "date": self.book_date.isoformat(),
+            },
+        )
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        self.assertEqual(data["count"], 1)
+        bar = data["bars"][0]
+        self.assertEqual(bar["name"], self.bar.name)
+        self.assertEqual(bar["free_spots"], 1)
+        self.assertEqual(bar["min_price"], "25.00")
+
+        page = self.client.get(
+            reverse("explore"),
+            {
+                "city": "Budva",
+                "amenity_ids": f"{self.parking.id},{self.wifi.id}",
+                "date": self.book_date.isoformat(),
+            },
+        )
+        self.assertContains(page, self.bar.name)
+        self.assertContains(page, "1 spot")
+        self.assertNotContains(page, self.other_bar.name)
+
+    def test_explore_price_sort_flow_matches_page_and_api(self):
+        api_response = self.client.get(
+            reverse("api_explore_bars"),
+            {"sort": "price_asc"},
+        )
+        api_names = [
+            bar["name"]
+            for bar in api_response.json()["bars"]
+            if bar["min_price"] is not None
+        ]
+
+        page = self.client.get(reverse("explore"), {"sort": "price_asc"})
+        self.assertEqual(page.status_code, 200)
+        self.assertContains(page, 'value="price_asc"')
+        body = page.content.decode()
+        first = body.find(api_names[0])
+        second = body.find(api_names[1])
+        self.assertNotEqual(first, -1)
+        self.assertNotEqual(second, -1)
+        self.assertLess(first, second)
+
+    def test_explore_dashboard_payload_includes_api_hook(self):
+        page = self.client.get(reverse("explore"))
+        self.assertContains(page, 'data-api-url="')
+        self.assertContains(page, reverse("api_explore_bars"))
+        self.assertContains(page, 'id="explore-apply"')
+        self.assertContains(page, 'id="explore-clear"')

@@ -6,6 +6,7 @@ urlpatterns = [
     path("", pages.index, name="index"),
     path("explore/", pages.explore, name="explore"),
     path("bars/<int:bar_id>/", pages.beach_bar, name="beach_bar"),
+    path("api/explore/bars/", api.explore_bars, name="api_explore_bars"),
     path("api/bars/<int:bar_id>/sunbeds/", api.bar_sunbeds, name="api_bar_sunbeds"),
     path("api/bars/<int:bar_id>/book/", api.book_sunbeds_api, name="api_book_sunbeds"),
     path(

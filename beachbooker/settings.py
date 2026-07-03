@@ -90,7 +90,7 @@ USE_TZ = True
 
 STATIC_URL = "static/"
 STATICFILES_DIRS = [BASE_DIR / "core" / "static"]
-APP_JS_VERSION = "8"
+APP_JS_VERSION = "9"
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 

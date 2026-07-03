@@ -83,6 +83,13 @@ Creates sample users (`owner@beachbooker.test`, `guest@beachbooker.test`, `admin
 
 Auth uses Django sessions (cookie-based). Register at `/register/` or log in at `/login/`.
 
+**Explore filters**
+
+1. Open **Explore** (`/explore/`) — beach bar cards load with free spots for the selected date.
+2. Filter by **city**, **date**, **price range** (min category price), and **amenities** (bar must have all selected).
+3. **Sort** by name, price, or rating. Apply updates results via AJAX (`GET /api/explore/bars/`) without a full page reload; the URL query string stays in sync for refresh/share.
+4. Clear all resets filters. Without JavaScript, the same filters still work via normal form GET.
+
 **Booking flow (logged-in guest)**
 
 1. Open a beach bar from Explore, pick a date, tap free spots on the map.

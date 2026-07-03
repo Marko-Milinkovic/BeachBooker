@@ -15,6 +15,13 @@ from core.services.bundles import (
     set_bundle_active,
     update_bundle,
 )
+from core.services.explore import (
+    ExploreError,
+    amenity_ids_from_querydict,
+    parse_price_bound,
+    parse_sort,
+    search_bars_payload,
+)
 from core.services.layout import (
     LayoutError,
     get_layout_editor_payload,
@@ -68,6 +75,30 @@ def bar_sunbeds(request, bar_id):
     bar = get_object_or_404(BeachBar, pk=bar_id)
     filter_date = parse_filter_date(request.GET.get("date"))
     return JsonResponse(get_sunbed_map_payload(bar, filter_date))
+
+
+def explore_bars(request):
+    try:
+        amenity_ids = amenity_ids_from_querydict(request.GET)
+        min_price = parse_price_bound(request.GET.get("min_price"), "min_price")
+        max_price = parse_price_bound(request.GET.get("max_price"), "max_price")
+        sort = parse_sort(request.GET.get("sort"))
+    except ExploreError as exc:
+        return JsonResponse(
+            {"error": exc.message, "code": exc.code},
+            status=400,
+        )
+
+    filter_date = parse_filter_date(request.GET.get("date"))
+    payload = search_bars_payload(
+        city=request.GET.get("city", ""),
+        filter_date=filter_date,
+        amenity_ids=amenity_ids,
+        min_price=min_price,
+        max_price=max_price,
+        sort=sort,
+    )
+    return JsonResponse(payload)
 
 
 @login_required_json

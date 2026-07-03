@@ -350,6 +350,15 @@ tr:hover td{background:var(--bg-alt)}
 .filters__title{font-size:1.0625rem;font-weight:700;padding-bottom:20px;border-bottom:1px solid var(--border-2);margin-bottom:20px}
 .filters__group{margin-bottom:20px}
 .filters__group-label{font-size:.8125rem;font-weight:600;margin-bottom:10px;display:block}
+.filters__price-row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.filters__price-row .field{margin:0}
+.filters__checkboxes{display:flex;flex-direction:column;gap:10px}
+.explore__toolbar{display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;gap:12px;flex-wrap:wrap}
+.explore__count{font-size:.9375rem;color:var(--text-2);font-weight:500}
+.explore__count strong{color:var(--text)}
+.explore__sort{width:auto;padding:8px 40px 8px 14px;font-size:.8125rem;border-radius:var(--r-full)}
+.explore__empty{text-align:center;padding:64px 24px}
+.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);border:0}
 
 /* ---- PAGE HEADER ---- */
 .ph{padding:48px 0;background:var(--text);color:#fff;border-bottom:none}
