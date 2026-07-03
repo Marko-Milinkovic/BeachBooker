@@ -34,6 +34,11 @@ from core.services.owner import (
     get_dashboard_overview,
     get_owner_bar,
 )
+from core.services.bar_settings import (
+    SettingsError,
+    get_bar_settings_payload,
+    update_bar_settings,
+)
 from core.services.explore import (
     ExploreError,
     amenity_ids_from_querydict,
@@ -2388,3 +2393,340 @@ class Slice9FlowTests(ExploreTestMixin, TestCase):
         self.assertContains(page, reverse("api_explore_bars"))
         self.assertContains(page, 'id="explore-apply"')
         self.assertContains(page, 'id="explore-clear"')
+
+
+class BarSettingsServiceTests(BookingTestMixin, TestCase):
+    @classmethod
+    def setUpTestData(cls):
+        super().setUpTestData()
+        cls.parking = Amenity.objects.create(name="Parking")
+        cls.wifi = Amenity.objects.create(name="Wi-Fi")
+        BeachBarAmenity.objects.create(beach_bar=cls.bar, amenity=cls.parking)
+
+    def test_get_settings_payload_includes_amenities(self):
+        payload = get_bar_settings_payload(self.bar)
+        self.assertEqual(payload["name"], self.bar.name)
+        self.assertEqual(payload["opening_time"], "08:00")
+        amenities = {item["id"]: item["selected"] for item in payload["amenities"]}
+        self.assertTrue(amenities[self.parking.id])
+        self.assertFalse(amenities[self.wifi.id])
+
+    def test_update_bar_fields_and_amenities(self):
+        payload = update_bar_settings(
+            self.bar,
+            name="New Horizon",
+            address="2 Shore Rd",
+            city="Kotor",
+            description="Updated description",
+            opening_time="09:30",
+            closing_time="21:00",
+            map_url="https://maps.example.com/bar",
+            amenity_ids=[self.wifi.id],
+        )
+        self.bar.refresh_from_db()
+        self.assertEqual(self.bar.name, "New Horizon")
+        self.assertEqual(self.bar.city, "Kotor")
+        self.assertEqual(self.bar.opening_time.strftime("%H:%M"), "09:30")
+        self.assertEqual(self.bar.map_url, "https://maps.example.com/bar")
+        linked = set(
+            BeachBarAmenity.objects.filter(beach_bar=self.bar).values_list(
+                "amenity_id", flat=True
+            )
+        )
+        self.assertEqual(linked, {self.wifi.id})
+        selected = {
+            item["id"] for item in payload["amenities"] if item["selected"]
+        }
+        self.assertEqual(selected, {self.wifi.id})
+
+    def test_rejects_empty_name(self):
+        with self.assertRaises(SettingsError) as ctx:
+            update_bar_settings(
+                self.bar,
+                name="   ",
+                address=self.bar.address,
+                city=self.bar.city,
+                description="",
+                opening_time="08:00",
+                closing_time="20:00",
+                map_url="",
+                amenity_ids=[],
+            )
+        self.assertEqual(ctx.exception.code, "invalid_name")
+
+    def test_rejects_opening_not_before_closing(self):
+        with self.assertRaises(SettingsError) as ctx:
+            update_bar_settings(
+                self.bar,
+                name=self.bar.name,
+                address=self.bar.address,
+                city=self.bar.city,
+                description="",
+                opening_time="20:00",
+                closing_time="08:00",
+                map_url="",
+                amenity_ids=[],
+            )
+        self.assertEqual(ctx.exception.code, "invalid_hours")
+
+    def test_rejects_unknown_amenity(self):
+        with self.assertRaises(SettingsError) as ctx:
+            update_bar_settings(
+                self.bar,
+                name=self.bar.name,
+                address=self.bar.address,
+                city=self.bar.city,
+                description="",
+                opening_time="08:00",
+                closing_time="20:00",
+                map_url="",
+                amenity_ids=[999999],
+            )
+        self.assertEqual(ctx.exception.code, "invalid_amenities")
+
+    def test_clear_all_amenities(self):
+        update_bar_settings(
+            self.bar,
+            name=self.bar.name,
+            address=self.bar.address,
+            city=self.bar.city,
+            description="",
+            opening_time="08:00",
+            closing_time="20:00",
+            map_url="",
+            amenity_ids=[],
+        )
+        self.assertFalse(
+            BeachBarAmenity.objects.filter(beach_bar=self.bar).exists()
+        )
+
+
+class BarSettingsApiTests(BookingTestMixin, TestCase):
+    @classmethod
+    def setUpTestData(cls):
+        super().setUpTestData()
+        cls.parking = Amenity.objects.create(name="Parking")
+
+    def test_owner_can_get_and_save_settings(self):
+        self.client.login(email=self.owner.email, password="testpass123")
+        get_response = self.client.get(reverse("api_owner_settings"))
+        self.assertEqual(get_response.status_code, 200)
+        self.assertEqual(get_response.json()["name"], self.bar.name)
+
+        post_response = self.api_post(
+            self.client,
+            reverse("api_owner_settings"),
+            {
+                "name": "API Horizon",
+                "address": "3 Shore",
+                "city": "Budva",
+                "description": "From API",
+                "opening_time": "07:00",
+                "closing_time": "19:00",
+                "map_url": "",
+                "amenity_ids": [self.parking.id],
+            },
+        )
+        self.assertEqual(post_response.status_code, 200)
+        self.assertTrue(post_response.json()["ok"])
+        self.bar.refresh_from_db()
+        self.assertEqual(self.bar.name, "API Horizon")
+        self.assertEqual(self.bar.opening_time.strftime("%H:%M"), "07:00")
+
+    def test_guest_cannot_access_settings_api(self):
+        self.login_guest()
+        response = self.client.get(reverse("api_owner_settings"))
+        self.assertEqual(response.status_code, 403)
+
+    def test_invalid_json_returns_400(self):
+        self.client.login(email=self.owner.email, password="testpass123")
+        response = self.client.post(
+            reverse("api_owner_settings"),
+            data="not json",
+            content_type="application/json",
+        )
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.json()["code"], "invalid_json")
+
+    def test_validation_error_returns_400(self):
+        self.client.login(email=self.owner.email, password="testpass123")
+        response = self.api_post(
+            self.client,
+            reverse("api_owner_settings"),
+            {
+                "name": "",
+                "address": "x",
+                "city": "y",
+                "description": "",
+                "opening_time": "08:00",
+                "closing_time": "20:00",
+                "map_url": "",
+                "amenity_ids": [],
+            },
+        )
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.json()["code"], "invalid_name")
+
+
+class BarSettingsUiTests(BookingTestMixin, TestCase):
+    @classmethod
+    def setUpTestData(cls):
+        super().setUpTestData()
+        cls.parking = Amenity.objects.create(name="Parking")
+        BeachBarAmenity.objects.create(beach_bar=cls.bar, amenity=cls.parking)
+
+    def test_settings_tab_renders_form(self):
+        self.client.login(email=self.owner.email, password="testpass123")
+        page = self.client.get(reverse("owner_dashboard"), {"tab": "settings"})
+        self.assertEqual(page.status_code, 200)
+        self.assertContains(page, 'id="tab-settings"')
+        self.assertContains(page, reverse("api_owner_settings"))
+        self.assertContains(page, 'id="bar-settings-form"')
+        self.assertContains(page, 'id="save-settings-btn"')
+        self.assertContains(page, "/static/core/js/bar_settings.js")
+        self.assertContains(page, self.bar.name)
+        self.assertContains(page, "Parking")
+        self.assertContains(page, 'data-tab="settings"')
+
+
+class BarSettingsIntegrationTests(BookingTestMixin, TestCase):
+    @classmethod
+    def setUpTestData(cls):
+        super().setUpTestData()
+        cls.parking = Amenity.objects.create(name="Parking")
+        cls.wifi = Amenity.objects.create(name="Wi-Fi")
+
+    def test_saved_settings_appear_on_guest_page_and_explore(self):
+        owner_client = Client(HTTP_HOST="127.0.0.1")
+        owner_client.login(email=self.owner.email, password="testpass123")
+        response = self.api_post(
+            owner_client,
+            reverse("api_owner_settings"),
+            {
+                "name": "Guest Visible Bar",
+                "address": "9 Coast",
+                "city": "Tivat",
+                "description": "Sunny cove",
+                "opening_time": "10:00",
+                "closing_time": "18:00",
+                "map_url": "https://maps.example.com/tivat",
+                "amenity_ids": [self.wifi.id],
+            },
+        )
+        self.assertEqual(response.status_code, 200)
+
+        guest_page = self.client.get(reverse("beach_bar", args=[self.bar.id]))
+        self.assertContains(guest_page, "Guest Visible Bar")
+        self.assertContains(guest_page, "Sunny cove")
+        self.assertContains(guest_page, "10:00")
+        self.assertContains(guest_page, "18:00")
+        self.assertContains(guest_page, "Wi-Fi")
+        self.assertContains(guest_page, "Open in Maps")
+        self.assertNotContains(guest_page, "Parking")
+
+        explore = self.client.get(
+            reverse("api_explore_bars"),
+            {"city": "Tivat", "amenity_ids": str(self.wifi.id)},
+        )
+        names = {bar["name"] for bar in explore.json()["bars"]}
+        self.assertIn("Guest Visible Bar", names)
+
+
+class BarSettingsEdgeCaseTests(BookingTestMixin, TestCase):
+    @classmethod
+    def setUpTestData(cls):
+        super().setUpTestData()
+        cls.parking = Amenity.objects.create(name="Parking")
+        BeachBarAmenity.objects.create(beach_bar=cls.bar, amenity=cls.parking)
+
+    def test_blank_description_and_map_url_allowed(self):
+        update_bar_settings(
+            self.bar,
+            name=self.bar.name,
+            address=self.bar.address,
+            city=self.bar.city,
+            description="   ",
+            opening_time="08:00",
+            closing_time="20:00",
+            map_url="",
+            amenity_ids=[self.parking.id],
+        )
+        self.bar.refresh_from_db()
+        self.assertIsNone(self.bar.description)
+        self.assertIsNone(self.bar.map_url)
+
+    def test_cleared_amenities_hide_from_guest_and_explore_filter(self):
+        update_bar_settings(
+            self.bar,
+            name=self.bar.name,
+            address=self.bar.address,
+            city=self.bar.city,
+            description="Still here",
+            opening_time="08:00",
+            closing_time="20:00",
+            map_url="",
+            amenity_ids=[],
+        )
+        guest_page = self.client.get(reverse("beach_bar", args=[self.bar.id]))
+        self.assertNotContains(guest_page, "Parking")
+
+        explore = self.client.get(
+            reverse("api_explore_bars"),
+            {"amenity_ids": str(self.parking.id)},
+        )
+        names = {bar["name"] for bar in explore.json()["bars"]}
+        self.assertNotIn(self.bar.name, names)
+
+
+class Slice10FlowTests(BookingTestMixin, TestCase):
+    @classmethod
+    def setUpTestData(cls):
+        super().setUpTestData()
+        cls.parking = Amenity.objects.create(name="Parking")
+        cls.wifi = Amenity.objects.create(name="Wi-Fi")
+
+    def test_owner_settings_flow_end_to_end(self):
+        owner_client = Client(HTTP_HOST="127.0.0.1")
+        owner_client.login(email=self.owner.email, password="testpass123")
+
+        page = owner_client.get(reverse("owner_dashboard"), {"tab": "settings"})
+        self.assertContains(page, reverse("api_owner_settings"))
+        self.assertContains(page, 'id="bar-name"')
+
+        save = self.api_post(
+            owner_client,
+            reverse("api_owner_settings"),
+            {
+                "name": "Flow Beach",
+                "address": "1 Flow",
+                "city": "Ulcinj",
+                "description": "Flow desc",
+                "opening_time": "09:00",
+                "closing_time": "17:00",
+                "map_url": "https://maps.example.com/flow",
+                "amenity_ids": [self.parking.id, self.wifi.id],
+            },
+        )
+        self.assertEqual(save.status_code, 200)
+
+        page_after = owner_client.get(
+            reverse("owner_dashboard"), {"tab": "settings"}
+        )
+        self.assertContains(page_after, "Flow Beach")
+        self.assertContains(page_after, "Ulcinj")
+        self.assertContains(page_after, 'value="09:00"')
+
+        guest = self.client.get(reverse("beach_bar", args=[self.bar.id]))
+        self.assertContains(guest, "Flow Beach")
+        self.assertContains(guest, "Parking")
+        self.assertContains(guest, "Wi-Fi")
+
+        explore = self.client.get(
+            reverse("api_explore_bars"),
+            {
+                "city": "Ulcinj",
+                "amenity_ids": f"{self.parking.id},{self.wifi.id}",
+            },
+        )
+        self.assertEqual(explore.json()["count"], 1)
+        self.assertEqual(explore.json()["bars"][0]["name"], "Flow Beach")

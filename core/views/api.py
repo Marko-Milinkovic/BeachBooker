@@ -15,6 +15,11 @@ from core.services.bundles import (
     set_bundle_active,
     update_bundle,
 )
+from core.services.bar_settings import (
+    SettingsError,
+    get_bar_settings_payload,
+    update_bar_settings,
+)
 from core.services.explore import (
     ExploreError,
     amenity_ids_from_querydict,
@@ -361,3 +366,42 @@ def owner_layout(request):
         )
 
     return JsonResponse({"ok": True, "layout": layout})
+
+
+@owner_required_json
+def owner_settings(request):
+    if request.method == "GET":
+        return JsonResponse(get_bar_settings_payload(request.owner_bar))
+
+    if request.method != "POST":
+        return JsonResponse(
+            {"error": "Method not allowed.", "code": "method_not_allowed"},
+            status=405,
+        )
+
+    payload = _parse_json_body(request)
+    if payload is None:
+        return JsonResponse(
+            {"error": "Invalid JSON body.", "code": "invalid_json"},
+            status=400,
+        )
+
+    try:
+        settings_payload = update_bar_settings(
+            request.owner_bar,
+            name=payload.get("name"),
+            address=payload.get("address"),
+            city=payload.get("city"),
+            description=payload.get("description"),
+            opening_time=payload.get("opening_time"),
+            closing_time=payload.get("closing_time"),
+            map_url=payload.get("map_url"),
+            amenity_ids=payload.get("amenity_ids"),
+        )
+    except SettingsError as exc:
+        return JsonResponse(
+            {"error": exc.message, "code": exc.code},
+            status=400,
+        )
+
+    return JsonResponse({"ok": True, "settings": settings_payload})

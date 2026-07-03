@@ -48,6 +48,11 @@
         <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg>
         <span id="info-availability">{{ free_spots }} available{% if filter_date == today %} today{% else %} on {{ filter_date|date:"M j" }}{% endif %}</span>
       </div>
+      {% if bar.map_url %}
+      <div class="info-bar__item">
+        <a href="{{ bar.map_url }}" target="_blank" rel="noopener noreferrer">Open in Maps</a>
+      </div>
+      {% endif %}
       {% if amenities %}
       <div class="info-bar__chips">
         {% for amenity in amenities %}

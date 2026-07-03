@@ -107,6 +107,7 @@ Auth uses Django sessions (cookie-based). Register at `/register/` or log in at 
 5. **Pricing** — edit per-category sunbed prices; new bookings snapshot the updated price.
 6. **Bundles** — create, edit, and enable/disable add-on bundles; guests select them when booking.
 7. **Layout** — paint the beach grid (rows × columns), place sunbeds by category, and save. Spot labels (e.g. S1, P2) are assigned automatically on save. You cannot remove or move a sunbed that has an active future booking; sunbeds with any past reservation history cannot be deleted from the layout.
+8. **Settings** — edit public name, address, city, description, opening hours, optional Maps link, and amenity toggles. Changes appear on the guest beach bar page and in Explore filters.
 
 **Layout editor manual check**
 

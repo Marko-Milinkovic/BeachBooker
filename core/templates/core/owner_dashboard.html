@@ -274,4 +274,75 @@
   </div>
   {% endif %}
 </section>
+
+<section id="tab-settings" class="dash-panel"{% if active_tab != 'settings' %} style="display:none"{% endif %}
+         data-settings-url="{% url 'api_owner_settings' %}">
+  <div class="dash__head">
+    <h1 class="dash__title">Bar settings</h1>
+    <p class="dash__sub">Configure how your beach bar appears to guests. Changes show on your public booking page and Explore.</p>
+  </div>
+
+  <form id="bar-settings-form" class="settings-grid">
+    <div class="settings-col">
+      <div class="card">
+        <h2 class="card__title">Basic info</h2>
+        <div class="field">
+          <label for="bar-name">Public name</label>
+          <input id="bar-name" name="name" class="input" type="text" required maxlength="120" value="{{ bar_settings.name }}">
+        </div>
+        <div class="field">
+          <label for="bar-desc">Description</label>
+          <textarea id="bar-desc" name="description" class="input" rows="5">{{ bar_settings.description }}</textarea>
+        </div>
+        <div class="settings-hours">
+          <div class="field">
+            <label for="bar-open">Opening time</label>
+            <input id="bar-open" name="opening_time" class="input" type="time" required value="{{ bar_settings.opening_time }}">
+          </div>
+          <div class="field">
+            <label for="bar-close">Closing time</label>
+            <input id="bar-close" name="closing_time" class="input" type="time" required value="{{ bar_settings.closing_time }}">
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2 class="card__title">Location</h2>
+        <div class="field">
+          <label for="bar-address">Address</label>
+          <input id="bar-address" name="address" class="input" type="text" required maxlength="255" value="{{ bar_settings.address }}">
+        </div>
+        <div class="field">
+          <label for="bar-city">City</label>
+          <input id="bar-city" name="city" class="input" type="text" required maxlength="80" value="{{ bar_settings.city }}">
+        </div>
+        <div class="field">
+          <label for="bar-maps">Google Maps link</label>
+          <input id="bar-maps" name="map_url" class="input" type="text" maxlength="512" value="{{ bar_settings.map_url }}" placeholder="https://maps.google.com/...">
+        </div>
+      </div>
+    </div>
+
+    <div class="settings-col">
+      <div class="card">
+        <h2 class="card__title">Amenities</h2>
+        <p class="settings-hint">Toggle amenities shown on your public page and used in Explore filters.</p>
+        <div class="amenity-grid" id="bar-amenities">
+          {% for amenity in bar_settings.amenities %}
+          <label class="amenity-item">
+            <input type="checkbox" class="bar-amenity" value="{{ amenity.id }}"{% if amenity.selected %} checked{% endif %}>
+            <span class="amenity-item__label">{{ amenity.name }}</span>
+          </label>
+          {% empty %}
+          <p class="tbl__empty">No amenities in the catalog yet.</p>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+
+    <div class="settings-actions">
+      <button type="submit" class="btn btn--teal btn--pill" id="save-settings-btn">Save settings</button>
+    </div>
+  </form>
+</section>
 {% endblock %}

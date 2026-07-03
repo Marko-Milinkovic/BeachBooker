@@ -4,8 +4,7 @@ from django.contrib.auth.decorators import login_required
 from django.shortcuts import redirect, render
 
 from core.models import UserRole
-
-OWNER_TABS = ("overview", "reservations", "pricing", "bundles", "layout")
+from core.services.bar_settings import get_bar_settings_payload
 from core.services.beach_bar import parse_filter_date
 from core.services.bundles import list_bundles
 from core.services.owner import (
@@ -14,6 +13,8 @@ from core.services.owner import (
     get_owner_bar,
 )
 from core.services.reservations import get_reservation_line_total
+
+OWNER_TABS = ("overview", "reservations", "pricing", "bundles", "layout", "settings")
 
 
 def owner_required(view_func):
@@ -59,6 +60,7 @@ def dashboard(request):
         request.owner_bar.sunbed_categories.order_by("price", "name")
     )
     bundles = list_bundles(request.owner_bar)
+    bar_settings = get_bar_settings_payload(request.owner_bar)
 
     return render(
         request,
@@ -73,6 +75,7 @@ def dashboard(request):
             "reservations": reservations,
             "categories": categories,
             "bundles": bundles,
+            "bar_settings": bar_settings,
             "today": filter_date,
         },
     )
