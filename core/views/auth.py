@@ -18,9 +18,23 @@ def _safe_next_url(request, default_name="explore"):
     return reverse(default_name)
 
 
+def _post_auth_redirect(request, user):
+    """Honor ?next= when present; otherwise owners go to the dashboard/setup."""
+    candidate = request.GET.get("next") or request.POST.get("next")
+    if candidate and url_has_allowed_host_and_scheme(
+        candidate,
+        allowed_hosts={request.get_host()},
+        require_https=request.is_secure(),
+    ):
+        return candidate
+    if user.role == UserRole.OWNER:
+        return reverse("owner_dashboard")
+    return reverse("explore")
+
+
 def login_page(request):
     if request.user.is_authenticated:
-        return redirect(_safe_next_url(request))
+        return redirect(_post_auth_redirect(request, request.user))
 
     error = None
     if request.method == "POST":
@@ -29,7 +43,7 @@ def login_page(request):
         user = authenticate(request, email=email, password=password)
         if user is not None:
             login(request, user)
-            return redirect(_safe_next_url(request))
+            return redirect(_post_auth_redirect(request, user))
         error = "Invalid email or password."
 
     return render(
@@ -45,7 +59,7 @@ def login_page(request):
 
 def register_page(request):
     if request.user.is_authenticated:
-        return redirect(_safe_next_url(request))
+        return redirect(_post_auth_redirect(request, request.user))
 
     errors = {}
     form_data = {
@@ -90,9 +104,7 @@ def register_page(request):
             )
             login(request, user)
             messages.success(request, "Account created. Welcome to BeachBooker!")
-            if user.role == UserRole.OWNER:
-                return redirect("owner_dashboard")
-            return redirect(_safe_next_url(request))
+            return redirect(_post_auth_redirect(request, user))
 
     return render(
         request,

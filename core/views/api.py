@@ -32,6 +32,11 @@ from core.services.layout import (
     get_layout_editor_payload,
     save_bar_layout,
 )
+from core.services.onboarding import (
+    OnboardingError,
+    create_owner_bar,
+    get_setup_form_payload,
+)
 from core.services.owner import get_owner_bar
 from core.services.pricing import PricingError, update_category_prices
 from core.services.reservations import (
@@ -405,3 +410,60 @@ def owner_settings(request):
         )
 
     return JsonResponse({"ok": True, "settings": settings_payload})
+
+
+@login_required_json
+def owner_setup(request):
+    if request.user.role != UserRole.OWNER:
+        return JsonResponse(
+            {"error": "Owner access required.", "code": "forbidden"},
+            status=403,
+        )
+
+    if request.method == "GET":
+        if get_owner_bar(request.user) is not None:
+            return JsonResponse(
+                {"error": "This account already has a beach bar.", "code": "already_has_bar"},
+                status=400,
+            )
+        return JsonResponse(get_setup_form_payload())
+
+    if request.method != "POST":
+        return JsonResponse(
+            {"error": "Method not allowed.", "code": "method_not_allowed"},
+            status=405,
+        )
+
+    payload = _parse_json_body(request)
+    if payload is None:
+        return JsonResponse(
+            {"error": "Invalid JSON body.", "code": "invalid_json"},
+            status=400,
+        )
+
+    try:
+        bar = create_owner_bar(
+            request.user,
+            name=payload.get("name"),
+            address=payload.get("address"),
+            city=payload.get("city"),
+            description=payload.get("description"),
+            opening_time=payload.get("opening_time"),
+            closing_time=payload.get("closing_time"),
+            map_url=payload.get("map_url"),
+            amenity_ids=payload.get("amenity_ids"),
+        )
+    except OnboardingError as exc:
+        status = 403 if exc.code == "forbidden" else 400
+        return JsonResponse(
+            {"error": exc.message, "code": exc.code},
+            status=status,
+        )
+
+    return JsonResponse(
+        {
+            "ok": True,
+            "bar_id": bar.id,
+            "redirect_url": "/owner/?tab=settings",
+        }
+    )

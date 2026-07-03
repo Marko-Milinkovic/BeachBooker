@@ -39,6 +39,12 @@ from core.services.bar_settings import (
     get_bar_settings_payload,
     update_bar_settings,
 )
+from core.services.onboarding import (
+    DEFAULT_CATEGORIES,
+    OnboardingError,
+    create_owner_bar,
+    get_setup_form_payload,
+)
 from core.services.explore import (
     ExploreError,
     amenity_ids_from_querydict,
@@ -394,7 +400,7 @@ class OwnerServiceTests(BookingTestMixin, TestCase):
         with self.assertRaises(OwnerAccessError):
             assert_owner_of_bar(other_owner, self.bar)
 
-    def test_owner_without_bar_gets_404(self):
+    def test_owner_without_bar_sees_setup_form(self):
         owner_no_bar = User.objects.create_user(
             email="nobars@test.beach",
             password="testpass123",
@@ -404,7 +410,10 @@ class OwnerServiceTests(BookingTestMixin, TestCase):
         )
         self.client.login(email=owner_no_bar.email, password="testpass123")
         response = self.client.get(reverse("owner_dashboard"))
-        self.assertEqual(response.status_code, 404)
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Create your beach bar")
+        self.assertContains(response, reverse("api_owner_setup"))
+        self.assertContains(response, 'id="bar-setup-form"')
 
 
 class OwnerOverviewTests(BookingTestMixin, TestCase):
@@ -2730,3 +2739,362 @@ class Slice10FlowTests(BookingTestMixin, TestCase):
         )
         self.assertEqual(explore.json()["count"], 1)
         self.assertEqual(explore.json()["bars"][0]["name"], "Flow Beach")
+
+
+class OnboardingServiceTests(TestCase):
+    @classmethod
+    def setUpTestData(cls):
+        cls.owner = User.objects.create_user(
+            email="newowner@test.beach",
+            password="testpass123",
+            first_name="New",
+            last_name="Owner",
+            role=UserRole.OWNER,
+        )
+        cls.parking = Amenity.objects.create(name="Parking")
+
+    def test_create_owner_bar_seeds_default_categories(self):
+        bar = create_owner_bar(
+            self.owner,
+            name="Fresh Beach",
+            address="1 New Rd",
+            city="Budva",
+            description="Brand new",
+            opening_time="08:00",
+            closing_time="20:00",
+            map_url="",
+            amenity_ids=[self.parking.id],
+        )
+        self.assertEqual(bar.owner_id, self.owner.id)
+        self.assertEqual(bar.name, "Fresh Beach")
+        categories = list(
+            SunbedCategory.objects.filter(beach_bar=bar).order_by("name")
+        )
+        self.assertEqual(len(categories), 2)
+        names = {category.name: category.price for category in categories}
+        self.assertEqual(names["Premium"], Decimal("25.00"))
+        self.assertEqual(names["Standard"], Decimal("15.00"))
+        self.assertTrue(
+            BeachBarAmenity.objects.filter(
+                beach_bar=bar, amenity=self.parking
+            ).exists()
+        )
+        self.assertEqual(Sunbed.objects.filter(beach_bar=bar).count(), 0)
+
+    def test_second_create_blocked(self):
+        create_owner_bar(
+            self.owner,
+            name="First Bar",
+            address="1 Rd",
+            city="Bar",
+            description="",
+            opening_time="08:00",
+            closing_time="20:00",
+            map_url="",
+            amenity_ids=[],
+        )
+        with self.assertRaises(OnboardingError) as ctx:
+            create_owner_bar(
+                self.owner,
+                name="Second Bar",
+                address="2 Rd",
+                city="Bar",
+                description="",
+                opening_time="08:00",
+                closing_time="20:00",
+                map_url="",
+                amenity_ids=[],
+            )
+        self.assertEqual(ctx.exception.code, "already_has_bar")
+
+    def test_rejects_empty_name(self):
+        with self.assertRaises(OnboardingError) as ctx:
+            create_owner_bar(
+                self.owner,
+                name="  ",
+                address="1 Rd",
+                city="Bar",
+                description="",
+                opening_time="08:00",
+                closing_time="20:00",
+                map_url="",
+                amenity_ids=[],
+            )
+        self.assertEqual(ctx.exception.code, "invalid_name")
+
+    def test_rejects_invalid_hours(self):
+        with self.assertRaises(OnboardingError) as ctx:
+            create_owner_bar(
+                self.owner,
+                name="Hours Bar",
+                address="1 Rd",
+                city="Bar",
+                description="",
+                opening_time="20:00",
+                closing_time="08:00",
+                map_url="",
+                amenity_ids=[],
+            )
+        self.assertEqual(ctx.exception.code, "invalid_hours")
+
+    def test_empty_amenities_allowed(self):
+        bar = create_owner_bar(
+            self.owner,
+            name="No Amenity Bar",
+            address="1 Rd",
+            city="Bar",
+            description="",
+            opening_time="08:00",
+            closing_time="20:00",
+            map_url="",
+            amenity_ids=[],
+        )
+        self.assertFalse(BeachBarAmenity.objects.filter(beach_bar=bar).exists())
+
+    def test_setup_form_payload_lists_amenities(self):
+        payload = get_setup_form_payload()
+        self.assertEqual(payload["opening_time"], "08:00")
+        names = [item["name"] for item in payload["amenities"]]
+        self.assertIn("Parking", names)
+
+
+class OnboardingApiTests(TestCase):
+    @classmethod
+    def setUpTestData(cls):
+        cls.owner = User.objects.create_user(
+            email="setupowner@test.beach",
+            password="testpass123",
+            first_name="Setup",
+            last_name="Owner",
+            role=UserRole.OWNER,
+        )
+        cls.guest = User.objects.create_user(
+            email="setupguest@test.beach",
+            password="testpass123",
+            first_name="Setup",
+            last_name="Guest",
+        )
+        cls.parking = Amenity.objects.create(name="Parking")
+
+    def api_post(self, client, url, payload=None):
+        return client.post(
+            url,
+            data=json.dumps(payload or {}),
+            content_type="application/json",
+        )
+
+    def test_owner_can_create_bar_via_api(self):
+        self.client.login(email=self.owner.email, password="testpass123")
+        response = self.api_post(
+            self.client,
+            reverse("api_owner_setup"),
+            {
+                "name": "API Beach",
+                "address": "9 Coast",
+                "city": "Tivat",
+                "description": "Created via API",
+                "opening_time": "09:00",
+                "closing_time": "19:00",
+                "map_url": "",
+                "amenity_ids": [self.parking.id],
+            },
+        )
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        self.assertTrue(data["ok"])
+        self.assertIn("bar_id", data)
+        self.assertEqual(data["redirect_url"], "/owner/?tab=settings")
+        bar = BeachBar.objects.get(id=data["bar_id"])
+        self.assertEqual(bar.owner_id, self.owner.id)
+        self.assertEqual(
+            SunbedCategory.objects.filter(beach_bar=bar).count(),
+            len(DEFAULT_CATEGORIES),
+        )
+
+    def test_second_setup_returns_400(self):
+        self.client.login(email=self.owner.email, password="testpass123")
+        payload = {
+            "name": "Only Bar",
+            "address": "1 Rd",
+            "city": "Bar",
+            "description": "",
+            "opening_time": "08:00",
+            "closing_time": "20:00",
+            "map_url": "",
+            "amenity_ids": [],
+        }
+        first = self.api_post(self.client, reverse("api_owner_setup"), payload)
+        self.assertEqual(first.status_code, 200)
+        second = self.api_post(self.client, reverse("api_owner_setup"), payload)
+        self.assertEqual(second.status_code, 400)
+        self.assertEqual(second.json()["code"], "already_has_bar")
+
+    def test_guest_cannot_setup(self):
+        self.client.login(email=self.guest.email, password="testpass123")
+        response = self.api_post(
+            self.client,
+            reverse("api_owner_setup"),
+            {
+                "name": "Nope",
+                "address": "1",
+                "city": "X",
+                "description": "",
+                "opening_time": "08:00",
+                "closing_time": "20:00",
+                "map_url": "",
+                "amenity_ids": [],
+            },
+        )
+        self.assertEqual(response.status_code, 403)
+
+    def test_unauthenticated_gets_401(self):
+        response = self.api_post(self.client, reverse("api_owner_setup"), {})
+        self.assertEqual(response.status_code, 401)
+
+
+class OnboardingUiTests(TestCase):
+    def test_owner_login_redirects_to_setup_when_no_bar(self):
+        owner = User.objects.create_user(
+            email="loginowner@test.beach",
+            password="testpass123",
+            first_name="Login",
+            last_name="Owner",
+            role=UserRole.OWNER,
+        )
+        response = self.client.post(
+            reverse("login"),
+            {"email": owner.email, "password": "testpass123"},
+        )
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response.url, reverse("owner_dashboard"))
+        setup_page = self.client.get(response.url)
+        self.assertContains(setup_page, "Create your beach bar")
+
+    def test_owner_login_with_next_honors_next(self):
+        owner = User.objects.create_user(
+            email="nextowner@test.beach",
+            password="testpass123",
+            first_name="Next",
+            last_name="Owner",
+            role=UserRole.OWNER,
+        )
+        response = self.client.post(
+            reverse("login"),
+            {
+                "email": owner.email,
+                "password": "testpass123",
+                "next": "/explore/",
+            },
+        )
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response.url, "/explore/")
+
+    def test_setup_page_renders_for_owner_without_bar(self):
+        owner = User.objects.create_user(
+            email="uiowner@test.beach",
+            password="testpass123",
+            first_name="Ui",
+            last_name="Owner",
+            role=UserRole.OWNER,
+        )
+        Amenity.objects.create(name="Wi-Fi")
+        self.client.login(email=owner.email, password="testpass123")
+        page = self.client.get(reverse("owner_dashboard"))
+        self.assertEqual(page.status_code, 200)
+        self.assertContains(page, 'id="bar-setup-form"')
+        self.assertContains(page, reverse("api_owner_setup"))
+        self.assertContains(page, "/static/core/js/bar_setup.js")
+        self.assertContains(page, "Wi-Fi")
+        self.assertContains(page, "Standard and Premium")
+
+    def test_owner_with_bar_sees_dashboard_not_setup(self):
+        owner = User.objects.create_user(
+            email="hasbar@test.beach",
+            password="testpass123",
+            first_name="Has",
+            last_name="Bar",
+            role=UserRole.OWNER,
+        )
+        BeachBar.objects.create(
+            owner=owner,
+            name="Existing",
+            address="1",
+            city="Budva",
+            opening_time=time(8, 0),
+            closing_time=time(20, 0),
+        )
+        self.client.login(email=owner.email, password="testpass123")
+        page = self.client.get(reverse("owner_dashboard"))
+        self.assertEqual(page.status_code, 200)
+        self.assertContains(page, 'id="tab-overview"')
+        self.assertNotContains(page, 'id="bar-setup-form"')
+
+
+class Slice13FlowTests(TestCase):
+    def api_post(self, client, url, payload=None):
+        return client.post(
+            url,
+            data=json.dumps(payload or {}),
+            content_type="application/json",
+        )
+
+    def test_register_owner_create_bar_reaches_dashboard_tabs(self):
+        Amenity.objects.create(name="Parking")
+        register = self.client.post(
+            reverse("register"),
+            {
+                "first_name": "Reg",
+                "last_name": "Owner",
+                "email": "regowner@test.beach",
+                "password": "testpass123",
+                "role": UserRole.OWNER,
+                "terms": "on",
+            },
+        )
+        self.assertEqual(register.status_code, 302)
+        self.assertEqual(register.url, reverse("owner_dashboard"))
+
+        setup_page = self.client.get(reverse("owner_dashboard"))
+        self.assertEqual(setup_page.status_code, 200)
+        self.assertContains(setup_page, "Create your beach bar")
+
+        create = self.api_post(
+            self.client,
+            reverse("api_owner_setup"),
+            {
+                "name": "Registered Beach",
+                "address": "5 Coast",
+                "city": "Budva",
+                "description": "From register flow",
+                "opening_time": "08:00",
+                "closing_time": "20:00",
+                "map_url": "https://maps.example.com/reg",
+                "amenity_ids": [],
+            },
+        )
+        self.assertEqual(create.status_code, 200)
+        bar_id = create.json()["bar_id"]
+
+        settings_page = self.client.get(
+            reverse("owner_dashboard"), {"tab": "settings"}
+        )
+        self.assertContains(settings_page, "Registered Beach")
+        self.assertContains(settings_page, "Budva")
+
+        pricing_page = self.client.get(
+            reverse("owner_dashboard"), {"tab": "pricing"}
+        )
+        self.assertContains(pricing_page, "Standard")
+        self.assertContains(pricing_page, "Premium")
+        self.assertContains(pricing_page, "15.00")
+        self.assertContains(pricing_page, "25.00")
+
+        layout_page = self.client.get(
+            reverse("owner_dashboard"), {"tab": "layout"}
+        )
+        self.assertContains(layout_page, 'id="tab-layout"')
+        self.assertContains(layout_page, reverse("api_owner_layout"))
+
+        guest_page = self.client.get(reverse("beach_bar", args=[bar_id]))
+        self.assertContains(guest_page, "Registered Beach")
+        self.assertContains(guest_page, "From register flow")

@@ -1,13 +1,90 @@
 {% extends "core/base.html" %}
+{% load static %}
 
-{% block title %}Owner Dashboard — BeachBooker{% endblock %}
+{% block title %}Create your beach bar — BeachBooker{% endblock %}
+
+{% block extra_head %}
+<link rel="stylesheet" href="{% static 'core/css/dashboard.css' %}">
+{% endblock %}
 
 {% block content %}
 <header class="ph"><div class="container">
-  <h1 class="ph__title">Owner Dashboard</h1>
-  <p class="ph__sub">No beach bar is linked to your account yet.</p>
+  <h1 class="ph__title">Create your beach bar</h1>
+  <p class="ph__sub">Set up your public profile to start managing layout, prices, and bookings.</p>
 </div></header>
-<section class="section"><div class="container" style="text-align:center;padding:48px 0">
-  <a href="{% url 'explore' %}" class="btn btn--outline btn--pill">Back to explore</a>
-</div></section>
+
+<section class="section">
+  <div class="container" style="max-width:920px">
+    <form id="bar-setup-form"
+          class="settings-grid"
+          data-setup-url="{% url 'api_owner_setup' %}"
+          data-redirect-url="{% url 'owner_dashboard' %}?tab=settings">
+      <div class="settings-col">
+        <div class="card">
+          <h2 class="card__title">Basic info</h2>
+          <div class="field">
+            <label for="setup-name">Public name</label>
+            <input id="setup-name" class="input" type="text" required maxlength="120" value="{{ setup.name }}">
+          </div>
+          <div class="field">
+            <label for="setup-desc">Description</label>
+            <textarea id="setup-desc" class="input" rows="4">{{ setup.description }}</textarea>
+          </div>
+          <div class="settings-hours">
+            <div class="field">
+              <label for="setup-open">Opening time</label>
+              <input id="setup-open" class="input" type="time" required value="{{ setup.opening_time }}">
+            </div>
+            <div class="field">
+              <label for="setup-close">Closing time</label>
+              <input id="setup-close" class="input" type="time" required value="{{ setup.closing_time }}">
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <h2 class="card__title">Location</h2>
+          <div class="field">
+            <label for="setup-address">Address</label>
+            <input id="setup-address" class="input" type="text" required maxlength="255" value="{{ setup.address }}">
+          </div>
+          <div class="field">
+            <label for="setup-city">City</label>
+            <input id="setup-city" class="input" type="text" required maxlength="80" value="{{ setup.city }}">
+          </div>
+          <div class="field">
+            <label for="setup-maps">Google Maps link</label>
+            <input id="setup-maps" class="input" type="text" maxlength="512" value="{{ setup.map_url }}" placeholder="https://maps.google.com/...">
+          </div>
+        </div>
+      </div>
+
+      <div class="settings-col">
+        <div class="card">
+          <h2 class="card__title">Amenities</h2>
+          <p class="settings-hint">Optional — you can change these later in Settings. Standard and Premium categories are created automatically.</p>
+          <div class="amenity-grid" id="setup-amenities">
+            {% for amenity in setup.amenities %}
+            <label class="amenity-item">
+              <input type="checkbox" class="setup-amenity" value="{{ amenity.id }}">
+              <span class="amenity-item__label">{{ amenity.name }}</span>
+            </label>
+            {% empty %}
+            <p class="tbl__empty">No amenities in the catalog yet. You can add them later in Settings after amenities exist.</p>
+            {% endfor %}
+          </div>
+        </div>
+      </div>
+
+      <div class="settings-actions">
+        <button type="submit" class="btn btn--teal btn--pill" id="setup-submit-btn">Create beach bar</button>
+        <a href="{% url 'explore' %}" class="btn btn--ghost btn--pill">Back to explore</a>
+      </div>
+    </form>
+  </div>
+</section>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'core/js/bar_setup.js' %}?v={{ APP_JS_VERSION }}"></script>
 {% endblock %}

@@ -7,6 +7,7 @@ from core.models import UserRole
 from core.services.bar_settings import get_bar_settings_payload
 from core.services.beach_bar import parse_filter_date
 from core.services.bundles import list_bundles
+from core.services.onboarding import get_setup_form_payload
 from core.services.owner import (
     get_bar_reservations,
     get_dashboard_overview,
@@ -28,8 +29,10 @@ def owner_required(view_func):
             return render(
                 request,
                 "core/owner_no_bar.html",
-                {"active_nav": "owner"},
-                status=404,
+                {
+                    "active_nav": "owner",
+                    "setup": get_setup_form_payload(),
+                },
             )
         request.owner_bar = bar
         return view_func(request, *args, **kwargs)
