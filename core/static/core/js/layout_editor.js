@@ -16,12 +16,21 @@
 
   if (!layoutUrl || !gridEl) return;
 
-  const CAT_COLORS = {
-    P: "var(--amber)",
-    S: "var(--green)",
-    L: "#7C3AED",
-    C: "var(--rose)",
+  const PREFIX_COLORS = {
+    P: { bg: "var(--amber-light)", border: "var(--amber)", text: "var(--amber)" },
+    S: { bg: "var(--green-light)", border: "#A7F3D0", text: "var(--green)" },
+    L: { bg: "#EDE9FE", border: "#A78BFA", text: "#6D28D9", round: true },
+    C: { bg: "var(--rose-light)", border: "var(--rose)", text: "#BE123C" },
   };
+
+  const EXTRA_COLORS = [
+    { bg: "var(--teal-light)", border: "var(--teal)", text: "var(--teal)" },
+    { bg: "#DBEAFE", border: "#3B82F6", text: "#1D4ED8" },
+    { bg: "#FCE7F3", border: "#EC4899", text: "#BE185D" },
+    { bg: "#FFEDD5", border: "#F97316", text: "#C2410C" },
+    { bg: "#E0E7FF", border: "#6366F1", text: "#4338CA" },
+    { bg: "#ECFCCB", border: "#84CC16", text: "#4D7C0F" },
+  ];
 
   let categories = [];
   let activeCategoryId = null;
@@ -76,7 +85,34 @@
   }
 
   function categoryById(id) {
-    return categories.find((cat) => cat.id === id);
+    const target = Number(id);
+    return categories.find((cat) => Number(cat.id) === target);
+  }
+
+  function categoryStyle(cat) {
+    const index = categories.findIndex((item) => item.id === cat.id);
+    if (index < 0) return EXTRA_COLORS[0];
+    if (PREFIX_COLORS[cat.prefix]) {
+      return PREFIX_COLORS[cat.prefix];
+    }
+    return EXTRA_COLORS[index % EXTRA_COLORS.length];
+  }
+
+  function categoryDotColor(cat) {
+    return categoryStyle(cat).text;
+  }
+
+  function cellClassName(cat) {
+    if (!cat) return "le-cell";
+    if (cat.prefix === "L") return "le-cell le-cell--L";
+    if (PREFIX_COLORS[cat.prefix]) return `le-cell le-cell--${cat.prefix}`;
+    return "le-cell le-cell--custom";
+  }
+
+  function cellStyleAttr(cat) {
+    if (!cat || PREFIX_COLORS[cat.prefix]) return "";
+    const style = categoryStyle(cat);
+    return ` style="background:${style.bg};border-color:${style.border};color:${style.text}"`;
   }
 
   function updateSummary() {
@@ -100,7 +136,7 @@
     let html = "";
     categories.forEach((cat) => {
       if (!counts[cat.name]) return;
-      const color = CAT_COLORS[cat.prefix] || "var(--text-3)";
+      const color = categoryDotColor(cat);
       html += `<div class="le-summary__item"><span class="le-summary__dot" style="background:${color}"></span>${cat.name}: ${counts[cat.name]}</div>`;
     });
     html += `<div class="le-summary__item le-summary__item--muted">Empty: ${empty} · Total cells: ${totalCells}</div>`;
@@ -115,9 +151,10 @@
         const cell = grid[r][c];
         const cat = cell.categoryId ? categoryById(cell.categoryId) : null;
         const prefix = cat ? cat.prefix : "";
-        const cls = prefix ? `le-cell le-cell--${prefix}` : "le-cell";
+        const cls = cellClassName(cat);
+        const styleAttr = cellStyleAttr(cat);
         const label = cell.label || (prefix || "");
-        html += `<button type="button" class="${cls}" data-row="${r}" data-col="${c}" aria-label="Cell ${r + 1}, ${c + 1}">${label}</button>`;
+        html += `<button type="button" class="${cls}"${styleAttr} data-row="${r}" data-col="${c}" aria-label="Cell ${r + 1}, ${c + 1}">${label}</button>`;
       }
       html += "</div>";
     }
@@ -144,7 +181,7 @@
     if (noCategoriesEl) noCategoriesEl.style.display = "none";
     let html = "";
     categories.forEach((cat, index) => {
-      const color = CAT_COLORS[cat.prefix] || "var(--text-3)";
+      const color = categoryDotColor(cat);
       html += `<button type="button" class="le-brush${index === 0 ? " le-brush--active" : ""}" data-category-id="${cat.id}"><span class="le-brush__dot" style="background:${color}"></span>${cat.name}</button>`;
     });
     html += '<span class="le-palette__sep" aria-hidden="true"></span>';

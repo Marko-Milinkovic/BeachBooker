@@ -15,6 +15,21 @@ urlpatterns = [
         name="api_cancel_reservation",
     ),
     path("api/owner/pricing/", api.owner_update_pricing, name="api_owner_pricing"),
+    path(
+        "api/owner/categories/",
+        api.owner_create_category,
+        name="api_owner_create_category",
+    ),
+    path(
+        "api/owner/categories/<int:category_id>/",
+        api.owner_update_category,
+        name="api_owner_update_category",
+    ),
+    path(
+        "api/owner/categories/<int:category_id>/delete/",
+        api.owner_delete_category,
+        name="api_owner_delete_category",
+    ),
     path("api/owner/bundles/", api.owner_create_bundle, name="api_owner_create_bundle"),
     path(
         "api/owner/bundles/<int:bundle_id>/",

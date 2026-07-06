@@ -85,7 +85,7 @@ Creates sample users (`owner@beachbooker.test`, `guest@beachbooker.test`, `admin
 1. Register with role **Beach bar owner** (or log in as an owner with no bar).
 2. You are taken to **Create your beach bar** — name, address, city, hours, optional description/Maps link/amenities.
 3. On create, Standard (€15) and Premium (€25) categories are seeded; no sunbeds yet (use Layout).
-4. You land on **Settings**; Pricing, Layout, Bundles, and Reservations are available immediately.
+4. You land on **Settings**; Categories & pricing, Layout, Bundles, and Reservations are available immediately.
 - Admin: `admin@beachbooker.test` / `demo1234` — Django admin at `/admin/`
 
 Auth uses Django sessions (cookie-based). Register at `/register/` or log in at `/login/`.
@@ -111,7 +111,7 @@ Auth uses Django sessions (cookie-based). Register at `/register/` or log in at 
 2. **Overview** — bookings, revenue, occupancy, and zone fill for a selected date.
 3. **Reservations** — all guest bookings for your bar; filter by date and status.
 4. **Cancel** an active guest booking; the spot becomes free on the guest map.
-5. **Pricing** — edit per-category sunbed prices; new bookings snapshot the updated price.
+5. **Categories & pricing** — create, edit, and delete sunbed categories (name, optional description, price). New bookings snapshot the current rate. Categories with sunbeds on the layout cannot be deleted.
 6. **Bundles** — create, edit, and enable/disable add-on bundles; guests select them when booking.
 7. **Layout** — paint the beach grid (rows × columns), place sunbeds by category, and save. Spot labels (e.g. S1, P2) are assigned automatically on save. You cannot remove or move a sunbed that has an active future booking; sunbeds with any past reservation history cannot be deleted from the layout.
 8. **Settings** — edit public name, address, city, description, opening hours, optional Maps link, and amenity toggles. Changes appear on the guest beach bar page and in Explore filters.

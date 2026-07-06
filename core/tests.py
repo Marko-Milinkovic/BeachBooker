@@ -20,6 +20,13 @@ from core.models import (
     UserRole,
 )
 from core.services.beach_bar import get_sunbed_map_payload
+from core.services.categories import (
+    CategoryError,
+    create_category,
+    delete_category,
+    list_categories,
+    update_category,
+)
 from core.services.bundles import (
     BundleError,
     create_bundle,
@@ -370,7 +377,7 @@ class OwnerDashboardAccessTests(BookingTestMixin, TestCase):
         self.assertContains(response, "Test Beach")
         self.assertContains(response, "Overview")
         self.assertContains(response, "Reservations")
-        self.assertContains(response, "Pricing")
+        self.assertContains(response, "Categories &amp; pricing")
         self.assertContains(response, "Bundles")
 
     def test_unauthenticated_redirects_to_login(self):
@@ -726,6 +733,239 @@ class PricingApiTests(BookingTestMixin, TestCase):
         self.assertEqual(response.status_code, 400)
 
 
+class CategoryServiceTests(BookingTestMixin, TestCase):
+    def test_create_and_list_categories(self):
+        category = create_category(self.bar, "VIP", "45.00", "Front row")
+        self.assertEqual(category.name, "VIP")
+        self.assertEqual(category.price, Decimal("45.00"))
+        self.assertEqual(category.description, "Front row")
+        names = [c.name for c in list_categories(self.bar)]
+        self.assertIn("VIP", names)
+        self.assertIn("Standard", names)
+
+    def test_update_category(self):
+        updated = update_category(
+            self.bar,
+            self.category.id,
+            "Premium Standard",
+            "28.50",
+            "Renamed zone",
+        )
+        self.assertEqual(updated.name, "Premium Standard")
+        self.assertEqual(updated.price, Decimal("28.50"))
+        self.assertEqual(updated.description, "Renamed zone")
+
+    def test_delete_empty_category(self):
+        extra = create_category(self.bar, "Cabana", "80.00", None)
+        delete_category(self.bar, extra.id)
+        self.assertFalse(SunbedCategory.objects.filter(pk=extra.id).exists())
+
+    def test_delete_rejects_category_with_sunbeds(self):
+        with self.assertRaises(CategoryError) as ctx:
+            delete_category(self.bar, self.category.id)
+        self.assertEqual(ctx.exception.code, "has_sunbeds")
+
+    def test_duplicate_name_rejected(self):
+        with self.assertRaises(CategoryError) as ctx:
+            create_category(self.bar, "standard", "20.00", None)
+        self.assertEqual(ctx.exception.code, "duplicate_name")
+
+    def test_update_duplicate_name_rejected(self):
+        other = create_category(self.bar, "Lazy Bag", "18.00", None)
+        with self.assertRaises(CategoryError) as ctx:
+            update_category(self.bar, other.id, "Standard", "18.00", None)
+        self.assertEqual(ctx.exception.code, "duplicate_name")
+
+    def test_create_rejects_invalid_price(self):
+        with self.assertRaises(CategoryError) as ctx:
+            create_category(self.bar, "Budget", "-5", None)
+        self.assertEqual(ctx.exception.code, "invalid_price")
+
+    def test_create_rejects_empty_name(self):
+        with self.assertRaises(CategoryError) as ctx:
+            create_category(self.bar, "  ", "10.00", None)
+        self.assertEqual(ctx.exception.code, "invalid_name")
+
+
+class CategoryApiTests(BookingTestMixin, TestCase):
+    def test_owner_can_create_category(self):
+        self.client.login(email=self.owner.email, password="testpass123")
+        response = self.api_post(
+            self.client,
+            reverse("api_owner_create_category"),
+            {
+                "name": "Cabana",
+                "description": "Private shade",
+                "price": "90.00",
+            },
+        )
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        self.assertTrue(data["ok"])
+        self.assertEqual(data["category"]["name"], "Cabana")
+        self.assertTrue(
+            SunbedCategory.objects.filter(
+                beach_bar=self.bar, name="Cabana"
+            ).exists()
+        )
+
+    def test_owner_can_update_and_delete_category(self):
+        category = create_category(self.bar, "Budget", "12.00", None)
+        self.client.login(email=self.owner.email, password="testpass123")
+        update_response = self.api_post(
+            self.client,
+            reverse("api_owner_update_category", args=[category.id]),
+            {"name": "Economy", "description": "Back row", "price": "14.00"},
+        )
+        self.assertEqual(update_response.status_code, 200)
+        category.refresh_from_db()
+        self.assertEqual(category.name, "Economy")
+        self.assertEqual(category.price, Decimal("14.00"))
+
+        delete_response = self.api_post(
+            self.client,
+            reverse("api_owner_delete_category", args=[category.id]),
+            {},
+        )
+        self.assertEqual(delete_response.status_code, 200)
+        self.assertFalse(SunbedCategory.objects.filter(pk=category.id).exists())
+
+    def test_delete_category_with_sunbeds_returns_400(self):
+        self.client.login(email=self.owner.email, password="testpass123")
+        response = self.api_post(
+            self.client,
+            reverse("api_owner_delete_category", args=[self.category.id]),
+            {},
+        )
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.json()["code"], "has_sunbeds")
+
+    def test_owner_cannot_update_other_bars_category(self):
+        other_owner = User.objects.create_user(
+            email="other-owner4@test.beach",
+            password="testpass123",
+            first_name="Other",
+            last_name="Owner",
+            role=UserRole.OWNER,
+        )
+        other_bar = BeachBar.objects.create(
+            owner=other_owner,
+            name="Other Beach 4",
+            address="4 Shore Rd",
+            city="Kotor",
+            opening_time=time(8, 0),
+            closing_time=time(20, 0),
+        )
+        other_category = SunbedCategory.objects.create(
+            beach_bar=other_bar,
+            name="Other Zone",
+            price=Decimal("10.00"),
+        )
+        self.client.login(email=self.owner.email, password="testpass123")
+        response = self.api_post(
+            self.client,
+            reverse("api_owner_update_category", args=[other_category.id]),
+            {"name": "Hacked", "description": "", "price": "1.00"},
+        )
+        self.assertEqual(response.status_code, 404)
+
+    def test_guest_cannot_create_category(self):
+        self.login_guest()
+        response = self.api_post(
+            self.client,
+            reverse("api_owner_create_category"),
+            {"name": "VIP", "price": "50.00"},
+        )
+        self.assertEqual(response.status_code, 403)
+
+
+class CategoryIntegrationTests(BookingTestMixin, TestCase):
+    def test_new_category_appears_in_layout_palette(self):
+        cabana = create_category(self.bar, "Cabana", "75.00", "Shaded")
+        payload = get_layout_editor_payload(self.bar)
+        names = {item["name"] for item in payload["categories"]}
+        self.assertIn("Cabana", names)
+        self.assertIn(cabana.id, {item["id"] for item in payload["categories"]})
+
+    def test_custom_category_gets_layout_prefix(self):
+        bar_table = create_category(self.bar, "Bar table", "40.00", None)
+        payload = get_layout_editor_payload(self.bar)
+        by_id = {item["id"]: item for item in payload["categories"]}
+        self.assertEqual(by_id[bar_table.id]["prefix"], "B")
+
+    def test_renamed_category_keeps_sunbed_labels_until_layout_save(self):
+        update_category(self.bar, self.category.id, "Economy", "22.00", None)
+        self.sunbed_a.refresh_from_db()
+        self.assertEqual(self.sunbed_a.label, "A1")
+
+        save_bar_layout(
+            self.bar,
+            rows=4,
+            cols=10,
+            cells=[
+                {
+                    "row": self.sunbed_a.grid_row,
+                    "col": self.sunbed_a.grid_col,
+                    "category_id": self.category.id,
+                    "sunbed_id": self.sunbed_a.id,
+                },
+                {
+                    "row": self.sunbed_b.grid_row,
+                    "col": self.sunbed_b.grid_col,
+                    "category_id": self.category.id,
+                    "sunbed_id": self.sunbed_b.id,
+                },
+            ],
+        )
+        self.sunbed_a.refresh_from_db()
+        self.assertEqual(self.sunbed_a.label, "E1")
+
+    def test_new_booking_uses_category_price_after_crud_update(self):
+        cabana = create_category(self.bar, "Cabana", "99.00", None)
+        Sunbed.objects.create(
+            beach_bar=self.bar,
+            category=cabana,
+            label="C1",
+            grid_row=1,
+            grid_col=0,
+        )
+        cabana_sunbed = Sunbed.objects.get(category=cabana)
+        reservation = book_sunbeds(
+            self.guest, self.bar, self.book_date, [cabana_sunbed.id]
+        )[0]
+        self.assertEqual(reservation.price_at_booking, Decimal("99.00"))
+
+    def test_map_api_reflects_new_category_price(self):
+        cabana = create_category(self.bar, "Cabana", "88.00", None)
+        Sunbed.objects.create(
+            beach_bar=self.bar,
+            category=cabana,
+            label="C1",
+            grid_row=1,
+            grid_col=0,
+        )
+        cabana_sunbed = Sunbed.objects.get(category=cabana)
+        payload = get_sunbed_map_payload(self.bar, self.book_date)
+        prices = {
+            cell["price"]
+            for row in payload["rows"]
+            for cell in row
+            if cell.get("id") == cabana_sunbed.id
+        }
+        self.assertEqual(prices, {"88.00"})
+
+    def test_pricing_tab_shows_category_crud_ui(self):
+        self.client.login(email=self.owner.email, password="testpass123")
+        response = self.client.get(
+            reverse("owner_dashboard"),
+            {"tab": "pricing"},
+        )
+        self.assertContains(response, "Categories &amp; pricing")
+        self.assertContains(response, "new-category-btn")
+        self.assertContains(response, reverse("api_owner_create_category"))
+        self.assertContains(response, "category-form")
+
+
 class BundleServiceTests(BookingTestMixin, TestCase):
     def test_create_and_list_bundles(self):
         bundle = create_bundle(self.bar, "Drinks", "Soft drinks", "8.00")
@@ -861,7 +1101,7 @@ class PricingIntegrationTests(BookingTestMixin, TestCase):
             {"tab": "pricing"},
         )
         self.assertContains(response, "Standard")
-        self.assertContains(response, "save-pricing-btn")
+        self.assertContains(response, "new-category-btn")
 
     def test_owner_bundles_tab_lists_existing_bundle(self):
         create_bundle(self.bar, "Drinks Package", "Two drinks", "8.00")
@@ -1217,19 +1457,16 @@ class Slice6FlowTests(BookingTestMixin, TestCase):
             reverse("owner_dashboard"),
             {"tab": "pricing"},
         )
-        self.assertContains(page, reverse("api_owner_pricing"))
-        self.assertContains(
-            page, f'data-category-id="{self.category.id}"'
-        )
-        self.assertContains(page, 'value="25.00"')
+        self.assertContains(page, reverse("api_owner_update_category", args=[self.category.id]))
+        self.assertContains(page, "&euro;25.00")
 
         response = self.api_post(
             self.client,
-            reverse("api_owner_pricing"),
+            reverse("api_owner_update_category", args=[self.category.id]),
             {
-                "prices": [
-                    {"category_id": self.category.id, "price": "33.50"},
-                ],
+                "name": "Standard",
+                "description": "",
+                "price": "33.50",
             },
         )
         self.assertEqual(response.status_code, 200)
@@ -1238,7 +1475,7 @@ class Slice6FlowTests(BookingTestMixin, TestCase):
             reverse("owner_dashboard"),
             {"tab": "pricing"},
         )
-        self.assertContains(page_after, 'value="33.50"')
+        self.assertContains(page_after, "&euro;33.50")
         self.category.refresh_from_db()
         self.assertEqual(self.category.price, Decimal("33.50"))
 
@@ -1339,7 +1576,7 @@ class Slice6FlowTests(BookingTestMixin, TestCase):
         self.assertContains(response, 'id="tab-pricing"')
         self.assertContains(response, 'id="tab-bundles"')
         self.assertContains(response, 'id="bundle-form"')
-        self.assertContains(response, 'id="save-pricing-btn"')
+        self.assertContains(response, 'id="category-form"')
 
 
 class Slice7FlowTests(BookingTestMixin, TestCase):
@@ -2739,6 +2976,75 @@ class Slice10FlowTests(BookingTestMixin, TestCase):
         )
         self.assertEqual(explore.json()["count"], 1)
         self.assertEqual(explore.json()["bars"][0]["name"], "Flow Beach")
+
+
+class Slice11FlowTests(BookingTestMixin, TestCase):
+    def test_owner_category_crud_flow_end_to_end(self):
+        owner_client = Client(HTTP_HOST="127.0.0.1")
+        owner_client.login(email=self.owner.email, password="testpass123")
+
+        page = owner_client.get(reverse("owner_dashboard"), {"tab": "pricing"})
+        self.assertContains(page, reverse("api_owner_create_category"))
+        self.assertContains(page, "new-category-btn")
+
+        create = self.api_post(
+            owner_client,
+            reverse("api_owner_create_category"),
+            {
+                "name": "Cabana",
+                "description": "Private shade",
+                "price": "95.00",
+            },
+        )
+        self.assertEqual(create.status_code, 200)
+        cabana_id = create.json()["category"]["id"]
+
+        layout_payload = get_layout_editor_payload(self.bar)
+        self.assertIn("Cabana", {c["name"] for c in layout_payload["categories"]})
+
+        update = self.api_post(
+            owner_client,
+            reverse("api_owner_update_category", args=[cabana_id]),
+            {
+                "name": "Premium Cabana",
+                "description": "Front cabana",
+                "price": "110.00",
+            },
+        )
+        self.assertEqual(update.status_code, 200)
+
+        standard_update = self.api_post(
+            owner_client,
+            reverse("api_owner_update_category", args=[self.category.id]),
+            {
+                "name": "Standard",
+                "description": "",
+                "price": "30.00",
+            },
+        )
+        self.assertEqual(standard_update.status_code, 200)
+        self.category.refresh_from_db()
+        self.assertEqual(self.category.price, Decimal("30.00"))
+
+        page_after = owner_client.get(reverse("owner_dashboard"), {"tab": "pricing"})
+        self.assertContains(page_after, "Premium Cabana")
+        self.assertContains(page_after, "110.00")
+        self.assertContains(page_after, "30.00")
+
+        blocked = self.api_post(
+            owner_client,
+            reverse("api_owner_delete_category", args=[self.category.id]),
+            {},
+        )
+        self.assertEqual(blocked.status_code, 400)
+
+        delete = self.api_post(
+            owner_client,
+            reverse("api_owner_delete_category", args=[cabana_id]),
+            {},
+        )
+        self.assertEqual(delete.status_code, 200)
+        self.assertFalse(SunbedCategory.objects.filter(pk=cabana_id).exists())
 
 
 class OnboardingServiceTests(TestCase):

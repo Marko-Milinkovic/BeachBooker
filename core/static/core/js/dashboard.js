@@ -38,29 +38,6 @@
     });
   });
 
-  const pricingPanel = document.getElementById("tab-pricing");
-  const savePricingBtn = document.getElementById("save-pricing-btn");
-  if (pricingPanel && savePricingBtn) {
-    savePricingBtn.addEventListener("click", async () => {
-      const prices = [...pricingPanel.querySelectorAll(".pricing-category-price")].map(
-        (input) => ({
-          category_id: Number(input.dataset.categoryId),
-          price: input.value,
-        })
-      );
-      savePricingBtn.disabled = true;
-      try {
-        await postJson(pricingPanel.dataset.pricingUrl, { prices });
-        alert("Prices saved.");
-      } catch (error) {
-        console.error(error);
-        alert(error.message || "Could not save prices.");
-      } finally {
-        savePricingBtn.disabled = false;
-      }
-    });
-  }
-
   const bundlesPanel = document.getElementById("tab-bundles");
   const bundleForm = document.getElementById("bundle-form");
   const bundleFormTitle = document.getElementById("bundle-form-title");
@@ -147,6 +124,102 @@
       } catch (error) {
         console.error(error);
         alert(error.message || "Could not save bundle.");
+        submitBtn.disabled = false;
+      }
+    });
+  }
+
+  const categoriesPanel = document.getElementById("tab-pricing");
+  const categoryForm = document.getElementById("category-form");
+  const categoryFormTitle = document.getElementById("category-form-title");
+  const categoryFormId = document.getElementById("category-form-id");
+  const categoryName = document.getElementById("category-name");
+  const categoryDescription = document.getElementById("category-description");
+  const categoryPrice = document.getElementById("category-price");
+  const newCategoryBtn = document.getElementById("new-category-btn");
+  const categoryFormCancel = document.getElementById("category-form-cancel");
+  let editingCategoryUrl = null;
+
+  function showCategoryForm(mode, row) {
+    if (!categoryForm) return;
+    categoryForm.style.display = "block";
+    if (mode === "edit" && row) {
+      categoryFormTitle.textContent = "Edit category";
+      categoryFormId.value = row.dataset.categoryId;
+      editingCategoryUrl = row.dataset.updateUrl;
+      categoryName.value = row.querySelector(".category-row__name")?.textContent.trim() || "";
+      categoryDescription.value = row.querySelector(".category-row__desc")?.textContent.trim() || "";
+      const priceText = row.querySelector(".category-row__price")?.textContent || "";
+      categoryPrice.value = priceText.replace(/[^\d.]/g, "");
+    } else {
+      categoryFormTitle.textContent = "New category";
+      categoryFormId.value = "";
+      editingCategoryUrl = null;
+      categoryName.value = "";
+      categoryDescription.value = "";
+      categoryPrice.value = "";
+    }
+    categoryName.focus();
+  }
+
+  function hideCategoryForm() {
+    if (categoryForm) categoryForm.style.display = "none";
+    editingCategoryUrl = null;
+  }
+
+  if (newCategoryBtn) {
+    newCategoryBtn.addEventListener("click", () => showCategoryForm("new"));
+  }
+  if (categoryFormCancel) {
+    categoryFormCancel.addEventListener("click", hideCategoryForm);
+  }
+
+  document.querySelectorAll(".edit-category-btn").forEach((button) => {
+    button.addEventListener("click", () => {
+      const row = button.closest(".category-row");
+      if (row) showCategoryForm("edit", row);
+    });
+  });
+
+  document.querySelectorAll(".delete-category-btn").forEach((button) => {
+    button.addEventListener("click", async () => {
+      const row = button.closest(".category-row");
+      if (!row) return;
+      const sunbedCount = Number(row.dataset.sunbedCount || "0");
+      if (sunbedCount > 0) {
+        alert("Remove all sunbeds from this category on the layout before deleting it.");
+        return;
+      }
+      if (!window.confirm("Delete this category?")) return;
+      button.disabled = true;
+      try {
+        await postJson(row.dataset.deleteUrl, {});
+        window.location.href = `${window.location.pathname}?tab=pricing`;
+      } catch (error) {
+        console.error(error);
+        alert(error.message || "Could not delete category.");
+        button.disabled = false;
+      }
+    });
+  });
+
+  if (categoryForm && categoriesPanel) {
+    categoryForm.addEventListener("submit", async (event) => {
+      event.preventDefault();
+      const payload = {
+        name: categoryName.value.trim(),
+        description: categoryDescription.value.trim(),
+        price: categoryPrice.value,
+      };
+      const submitBtn = categoryForm.querySelector('button[type="submit"]');
+      submitBtn.disabled = true;
+      try {
+        const url = editingCategoryUrl || categoriesPanel.dataset.createCategoryUrl;
+        await postJson(url, payload);
+        window.location.href = `${window.location.pathname}?tab=pricing`;
+      } catch (error) {
+        console.error(error);
+        alert(error.message || "Could not save category.");
         submitBtn.disabled = false;
       }
     });

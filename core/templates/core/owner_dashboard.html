@@ -118,49 +118,64 @@
 </section>
 
 <section id="tab-pricing" class="dash-panel"{% if active_tab != 'pricing' %} style="display:none"{% endif %}
-         data-pricing-url="{% url 'api_owner_pricing' %}">
-  <div class="dash__head">
-    <h1 class="dash__title">Category pricing</h1>
-    <p class="dash__sub">Set the price per spot for each zone. New bookings use these rates.</p>
+         data-create-category-url="{% url 'api_owner_create_category' %}">
+  <div class="dash__head dash__head--split">
+    <div>
+      <h1 class="dash__title">Categories &amp; pricing</h1>
+      <p class="dash__sub">Create sunbed zones and set prices. New bookings snapshot the current rate.</p>
+    </div>
+    <button type="button" class="btn btn--teal btn--pill" id="new-category-btn">+ New category</button>
   </div>
 
-  <div class="card">
-    <table class="tbl">
-      <thead>
-        <tr>
-          <th>Category</th>
-          <th>Price / spot / day</th>
-        </tr>
-      </thead>
-      <tbody>
-        {% for category in categories %}
-        <tr>
-          <td><strong>{{ category.name }}</strong></td>
-          <td>
-            <div class="price-input">
-              <span class="price-input__cur">&euro;</span>
-              <input type="number"
-                     class="price-input__field pricing-category-price"
-                     min="0"
-                     step="0.01"
-                     data-category-id="{{ category.id }}"
-                     value="{{ category.price|floatformat:2 }}">
-            </div>
-          </td>
-        </tr>
-        {% empty %}
-        <tr>
-          <td colspan="2" class="tbl__empty">No categories configured.</td>
-        </tr>
-        {% endfor %}
-      </tbody>
-    </table>
-    {% if categories %}
-    <div class="dash-form-actions">
-      <button type="button" class="btn btn--teal btn--pill" id="save-pricing-btn">Save prices</button>
+  <div class="category-list" id="category-list">
+    {% for category in categories %}
+    <article class="category-row"
+             data-category-id="{{ category.id }}"
+             data-update-url="{% url 'api_owner_update_category' category.id %}"
+             data-delete-url="{% url 'api_owner_delete_category' category.id %}"
+             data-sunbed-count="{{ category.sunbeds.count }}">
+      <div class="category-row__info">
+        <div class="category-row__name">{{ category.name }}</div>
+        {% if category.description %}
+        <div class="category-row__desc">{{ category.description }}</div>
+        {% endif %}
+        {% if category.sunbeds.count %}
+        <div class="category-row__meta">{{ category.sunbeds.count }} sunbed{{ category.sunbeds.count|pluralize }} on layout</div>
+        {% endif %}
+      </div>
+      <div class="category-row__price">&euro;{{ category.price|floatformat:2 }}</div>
+      <div class="category-row__actions">
+        <button type="button" class="btn btn--ghost btn--sm edit-category-btn">Edit</button>
+        <button type="button" class="btn btn--ghost btn--sm delete-category-btn">Delete</button>
+      </div>
+    </article>
+    {% empty %}
+    <div class="card">
+      <p class="tbl__empty">No categories yet. Create one to start pricing and layout.</p>
     </div>
-    {% endif %}
+    {% endfor %}
   </div>
+
+  <form id="category-form" class="card category-form" style="display:none">
+    <h2 class="card__title" id="category-form-title">New category</h2>
+    <input type="hidden" id="category-form-id" value="">
+    <div class="field">
+      <label for="category-name">Name</label>
+      <input type="text" id="category-name" class="input" required maxlength="80">
+    </div>
+    <div class="field">
+      <label for="category-description">Description</label>
+      <input type="text" id="category-description" class="input" maxlength="255">
+    </div>
+    <div class="field">
+      <label for="category-price">Price per spot / day (&euro;)</label>
+      <input type="number" id="category-price" class="input" min="0" step="0.01" required>
+    </div>
+    <div class="dash-form-actions">
+      <button type="button" class="btn btn--ghost btn--pill" id="category-form-cancel">Cancel</button>
+      <button type="submit" class="btn btn--teal btn--pill">Save category</button>
+    </div>
+  </form>
 </section>
 
 <section id="tab-bundles" class="dash-panel"{% if active_tab != 'bundles' %} style="display:none"{% endif %}
@@ -228,7 +243,7 @@
 
   {% if not categories %}
   <div class="card">
-    <p class="tbl__empty">Add sunbed categories under <a href="{% url 'owner_dashboard' %}?tab=pricing">Pricing</a> before editing the layout.</p>
+    <p class="tbl__empty">Add sunbed categories under <a href="{% url 'owner_dashboard' %}?tab=pricing">Categories &amp; pricing</a> before editing the layout.</p>
   </div>
   {% else %}
   <div class="card le-controls">

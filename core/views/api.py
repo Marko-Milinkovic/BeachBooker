@@ -7,6 +7,13 @@ from django.views.decorators.http import require_POST
 
 from core.models import BeachBar, Reservation, UserRole
 from core.services.beach_bar import get_sunbed_map_payload, parse_filter_date
+from core.services.categories import (
+    CategoryError,
+    create_category,
+    delete_category,
+    serialize_category,
+    update_category,
+)
 from core.services.bundles import (
     BundleError,
     create_bundle,
@@ -250,6 +257,75 @@ def owner_update_pricing(request):
             ],
         }
     )
+
+
+@owner_required_json
+@require_POST
+def owner_create_category(request):
+    payload = _parse_json_body(request)
+    if payload is None:
+        return JsonResponse(
+            {"error": "Invalid JSON body.", "code": "invalid_json"},
+            status=400,
+        )
+
+    try:
+        category = create_category(
+            request.owner_bar,
+            payload.get("name"),
+            payload.get("price"),
+            payload.get("description"),
+        )
+    except CategoryError as exc:
+        return JsonResponse(
+            {"error": exc.message, "code": exc.code},
+            status=400,
+        )
+
+    return JsonResponse({"ok": True, "category": serialize_category(category)})
+
+
+@owner_required_json
+@require_POST
+def owner_update_category(request, category_id):
+    payload = _parse_json_body(request)
+    if payload is None:
+        return JsonResponse(
+            {"error": "Invalid JSON body.", "code": "invalid_json"},
+            status=400,
+        )
+
+    try:
+        category = update_category(
+            request.owner_bar,
+            category_id,
+            payload.get("name"),
+            payload.get("price"),
+            payload.get("description"),
+        )
+    except CategoryError as exc:
+        status = 404 if exc.code == "not_found" else 400
+        return JsonResponse(
+            {"error": exc.message, "code": exc.code},
+            status=status,
+        )
+
+    return JsonResponse({"ok": True, "category": serialize_category(category)})
+
+
+@owner_required_json
+@require_POST
+def owner_delete_category(request, category_id):
+    try:
+        delete_category(request.owner_bar, category_id)
+    except CategoryError as exc:
+        status = 404 if exc.code == "not_found" else 400
+        return JsonResponse(
+            {"error": exc.message, "code": exc.code},
+            status=status,
+        )
+
+    return JsonResponse({"ok": True})
 
 
 @owner_required_json
