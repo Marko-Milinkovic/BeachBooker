@@ -1,0 +1,18 @@
+{% if trend.vs_yesterday_pct is None %}
+<div class="stat__trend stat__trend--flat">— vs yesterday</div>
+{% elif trend.vs_yesterday_pct > 0 %}
+<div class="stat__trend stat__trend--up">+{{ trend.vs_yesterday_pct }}% vs yesterday</div>
+{% elif trend.vs_yesterday_pct < 0 %}
+<div class="stat__trend stat__trend--down">{{ trend.vs_yesterday_pct }}% vs yesterday</div>
+{% else %}
+<div class="stat__trend stat__trend--flat">0% vs yesterday</div>
+{% endif %}
+{% if trend.vs_last_week_pct is None %}
+<div class="stat__trend stat__trend--flat">— vs last week</div>
+{% elif trend.vs_last_week_pct > 0 %}
+<div class="stat__trend stat__trend--up">+{{ trend.vs_last_week_pct }}% vs last week</div>
+{% elif trend.vs_last_week_pct < 0 %}
+<div class="stat__trend stat__trend--down">{{ trend.vs_last_week_pct }}% vs last week</div>
+{% else %}
+<div class="stat__trend stat__trend--flat">0% vs last week</div>
+{% endif %}

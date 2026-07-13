@@ -10,6 +10,7 @@ from core.models import (
     BeachBarAmenity,
     Bundle,
     Reservation,
+    ReservationBundle,
     ReservationStatus,
     Sunbed,
     SunbedCategory,
@@ -133,14 +134,42 @@ class Command(BaseCommand):
             ],
         )
 
-        tomorrow = date.today() + timedelta(days=1)
-        reservations = self._ensure_reservations(
-            guest,
-            blue_beds,
-            BLUE_HORIZON_TAKEN,
-            tomorrow,
-            blue_categories,
-        )
+        today = date.today()
+        # Seed a rolling window so Overview stays pitchable for several days
+        # without requiring a same-day reseed (cover at least through +3 days).
+        day_plans = [
+            # (offset_from_today, labels)
+            (-7, {"P1", "P6", "P9", "S2", "S6", "S10", "L3", "L7", "C1"}),
+            (-6, {"P2", "S1", "S8", "L2", "C2"}),
+            (-5, {"P3", "P5", "S4", "S9", "L5", "L9"}),
+            (-4, {"P4", "P8", "S3", "S7", "L1", "L6", "C3"}),
+            (-3, {"P1", "P7", "S2", "S5", "L4", "C1", "C2"}),
+            (-2, {"P2", "P6", "S6", "S10", "L8"}),
+            (-1, {"P2", "P4", "S3", "S5", "L2", "C2"}),
+            (0, {
+                "P1", "P3", "P5", "P8",
+                "S1", "S2", "S4", "S7", "S8",
+                "L1", "L4", "L5", "L8",
+                "C1", "C3",
+            }),
+            (1, BLUE_HORIZON_TAKEN),
+            (2, {"P1", "P4", "P9", "S3", "S6", "S8", "L2", "L7", "C2"}),
+            (3, {"P2", "P5", "P7", "S1", "S4", "S9", "L3", "L6", "L10", "C1"}),
+            (4, {"P3", "P6", "S2", "S5", "S7", "L1", "L5", "C3"}),
+            (5, {"P1", "P8", "S3", "S10", "L4", "L9", "C2"}),
+            (6, {"P4", "P7", "S6", "S8", "L2", "L8", "C1"}),
+            (7, {"P2", "P5", "S1", "S9", "L3", "L7", "C4"}),
+        ]
+
+        reservations = 0
+        for offset, labels in day_plans:
+            reservations += self._ensure_reservations(
+                guest,
+                blue_beds,
+                labels,
+                today + timedelta(days=offset),
+                blue_categories,
+            )
         bundles = self._ensure_bundles(
             blue,
             [
@@ -148,14 +177,21 @@ class Command(BaseCommand):
                 ("Parking", "Reserved spot near the entrance", Decimal("5.00")),
             ],
         )
+        # Attach add-ons to "today" and nearby pitch days so Overview stays rich.
+        for offset in (0, 1, 2, 3):
+            self._ensure_demo_bundle_sales(blue, guest, today + timedelta(days=offset))
+        self._detach_stray_demo_owner_bars(owner)
 
         self.stdout.write(self.style.SUCCESS("Demo data ready."))
         self.stdout.write(f"  Users: owner, guest, admin @beachbooker.test / {DEMO_PASSWORD}")
+        self.stdout.write(f"  Pitch owner dashboard: {owner.email} → Riccardo Beach Bar (seeded trends)")
         self.stdout.write(f"  Beach bars: {BeachBar.objects.count()}")
         self.stdout.write(f"  Sunbeds: {Sunbed.objects.count()}")
         self.stdout.write(f"  Bundles: {bundles}")
-        self.stdout.write(f"  Active reservations (tomorrow): {reservations}")
-
+        self.stdout.write(
+            "  Reservations window: today-7 … today+7 "
+            f"(new rows this run: {reservations})"
+        )
     def _ensure_user(self, email, first_name, last_name, role, reset_password):
         user, created = User.objects.get_or_create(
             email=email,
@@ -262,3 +298,47 @@ class Command(BaseCommand):
             if created:
                 count += 1
         return count
+
+    def _ensure_demo_bundle_sales(self, bar, guest, reservation_date):
+        drinks = Bundle.objects.filter(beach_bar=bar, name="Drinks Package").first()
+        parking = Bundle.objects.filter(beach_bar=bar, name="Parking").first()
+        if not drinks or not parking:
+            return
+        first = (
+            Reservation.objects.filter(
+                sunbed__beach_bar=bar,
+                reservation_date=reservation_date,
+                status=ReservationStatus.ACTIVE,
+                user=guest,
+            )
+            .order_by("id")
+            .first()
+        )
+        if first is None:
+            return
+        ReservationBundle.objects.get_or_create(
+            reservation=first,
+            bundle=drinks,
+            defaults={"price_at_booking": drinks.price},
+        )
+        ReservationBundle.objects.get_or_create(
+            reservation=first,
+            bundle=parking,
+            defaults={"price_at_booking": parking.price},
+        )
+
+    def _detach_stray_demo_owner_bars(self, demo_owner):
+        """Keep demo owner on showcase bars only so Overview pitch data is visible."""
+        showcase = {"Riccardo Beach Bar", "Porto Skver Beach"}
+        stray_bars = BeachBar.objects.filter(owner=demo_owner).exclude(name__in=showcase)
+        if not stray_bars.exists():
+            return
+        holding = self._ensure_user(
+            "owner-extra@beachbooker.test",
+            "Extra",
+            "Owner",
+            UserRole.OWNER,
+            reset_password=False,
+        )
+        updated = stray_bars.update(owner=holding)
+        self.stdout.write(f"  Reassigned {updated} non-showcase bar(s) away from demo owner.")

@@ -4,7 +4,7 @@
 {% block title %}{{ bar.name }} — BeachBooker{% endblock %}
 
 {% block extra_head %}
-<link rel="stylesheet" href="{% static 'core/css/beach_bar.css' %}">
+<link rel="stylesheet" href="{% static 'core/css/beach_bar.css' %}?v={{ APP_ASSET_VERSION }}">
 {% endblock %}
 
 {% block content %}

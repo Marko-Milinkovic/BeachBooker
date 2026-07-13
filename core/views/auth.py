@@ -6,6 +6,8 @@ from django.utils.http import url_has_allowed_host_and_scheme
 
 from core.models import User, UserRole
 
+MIN_PASSWORD_LENGTH = 8
+
 
 def _safe_next_url(request, default_name="explore"):
     candidate = request.GET.get("next") or request.POST.get("next")
@@ -80,6 +82,7 @@ def register_page(request):
             "role": request.POST.get("role", UserRole.REGISTERED),
         }
         password = request.POST.get("password", "")
+        password_confirm = request.POST.get("password_confirm", "")
         terms = request.POST.get("terms")
 
         if not form_data["first_name"]:
@@ -92,6 +95,14 @@ def register_page(request):
             errors["email"] = "An account with this email already exists."
         if not password:
             errors["password"] = "Password is required."
+        elif len(password) < MIN_PASSWORD_LENGTH:
+            errors["password"] = (
+                f"Password must be at least {MIN_PASSWORD_LENGTH} characters."
+            )
+        if not password_confirm:
+            errors["password_confirm"] = "Please confirm your password."
+        elif password and password_confirm != password:
+            errors["password_confirm"] = "Password confirmation does not match."
         if form_data["role"] not in (UserRole.REGISTERED, UserRole.OWNER):
             errors["role"] = "Invalid role."
         if not terms:

@@ -121,6 +121,23 @@ Bulk owner accounts: `owner001@beachbooker.test` … `owner100@beachbooker.test`
 - Owner: `owner@beachbooker.test` / `demo1234` — owner dashboard (overview, reservations, cancel guest bookings)
 - Admin: `admin@beachbooker.test` / `demo1234` — BeachBooker Admin at `/admin-panel/` (users + activity log); Django `/admin/` remains as backup
 
+### Pitch day (owner Overview demo)
+
+`seed_demo` fills **Riccardo Beach Bar** with bookings for **today−7 … today+7** (so trends look real). Re-run it on the morning of a pitch so “today” is centered on that day:
+
+```bash
+python manage.py seed_demo
+python manage.py runserver
+```
+
+Then log in as:
+
+| | |
+|--|--|
+| Email | `owner@beachbooker.test` |
+| Password | `demo1234` |
+| Opens | **Riccardo Beach Bar** → Overview (bookings, revenue, occupancy ring, vs yesterday / vs last week, add-ons, zone revenue) |
+
 ### Owner onboarding
 
 1. Register with role **Beach bar owner** (or log in as an owner with no bar).

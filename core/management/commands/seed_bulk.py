@@ -341,20 +341,14 @@ class Command(BaseCommand):
         if not sunbeds:
             return
 
-        occupancy = rng.uniform(0.25, 0.35)
         pool = list(sunbeds)
-        rng.shuffle(pool)
-        take_count = max(1, int(len(pool) * occupancy))
-        selected = pool[:take_count]
         bookers = [primary_guest, *guests]
-
-        for offset in range(7):
+        # Cover yesterday/last-week baselines and a week of upcoming days.
+        for offset in range(-7, 7):
             reservation_date = date.today() + timedelta(days=offset)
-            day_slice = (
-                selected
-                if offset < 3
-                else rng.sample(selected, max(1, len(selected) // 2))
-            )
+            occupancy = rng.uniform(0.15, 0.45)
+            take_count = max(1, int(len(pool) * occupancy))
+            day_slice = rng.sample(pool, min(take_count, len(pool)))
             for sunbed in day_slice:
                 guest = rng.choice(bookers)
                 Reservation.objects.get_or_create(

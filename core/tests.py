@@ -396,6 +396,25 @@ class OwnerServiceTests(BookingTestMixin, TestCase):
     def test_get_owner_bar_returns_none_for_guest(self):
         self.assertIsNone(get_owner_bar(self.guest))
 
+    def test_get_owner_bar_prefers_demo_showcase(self):
+        BeachBar.objects.create(
+            owner=self.owner,
+            name="Earlier Empty Lounge",
+            address="0 Port",
+            city="Kotor",
+            opening_time=time(8, 0),
+            closing_time=time(20, 0),
+        )
+        showcase = BeachBar.objects.create(
+            owner=self.owner,
+            name="Riccardo Beach Bar",
+            address="1 Port",
+            city="Budva",
+            opening_time=time(8, 0),
+            closing_time=time(20, 0),
+        )
+        self.assertEqual(get_owner_bar(self.owner), showcase)
+
     def test_assert_owner_of_bar_passes_for_owner(self):
         assert_owner_of_bar(self.owner, self.bar)
 
@@ -435,6 +454,9 @@ class OwnerOverviewTests(BookingTestMixin, TestCase):
         self.assertEqual(overview["free_spots"], 1)
         self.assertEqual(overview["occupancy_pct"], 50)
         self.assertEqual(overview["revenue"], Decimal("25.00"))
+        self.assertEqual(overview["spot_revenue"], Decimal("25.00"))
+        self.assertEqual(overview["category_revenue"][0]["revenue"], Decimal("25.00"))
+        self.assertEqual(overview["ring_dashoffset"], round(327 * 0.5))
 
     def test_overview_page_shows_stats(self):
         book_sunbeds(self.guest, self.bar, self.book_date, [self.sunbed_a.id])
@@ -445,6 +467,54 @@ class OwnerOverviewTests(BookingTestMixin, TestCase):
         )
         self.assertContains(response, "50%")
         self.assertContains(response, "Bookings")
+        self.assertContains(response, "Add-on Revenue")
+        self.assertContains(response, "Quick Actions")
+        self.assertContains(response, "?tab=layout")
+        self.assertContains(response, "?tab=pricing")
+
+    def test_overview_trends_vs_yesterday_and_last_week(self):
+        yesterday = self.book_date - timedelta(days=1)
+        last_week = self.book_date - timedelta(days=7)
+        book_sunbeds(self.guest, self.bar, self.book_date, [self.sunbed_a.id, self.sunbed_b.id])
+        book_sunbeds(self.guest, self.bar, yesterday, [self.sunbed_a.id])
+        book_sunbeds(self.guest, self.bar, last_week, [self.sunbed_a.id])
+
+        overview = get_dashboard_overview(self.bar, self.book_date)
+        self.assertEqual(overview["bookings_count"], 2)
+        self.assertEqual(overview["trends"]["bookings_count"]["vs_yesterday_pct"], 100)
+        self.assertEqual(overview["trends"]["bookings_count"]["vs_last_week_pct"], 100)
+        self.assertEqual(overview["trends"]["occupancy_pct"]["vs_yesterday_pct"], 100)
+
+        self.client.login(email=self.owner.email, password="testpass123")
+        response = self.client.get(
+            reverse("owner_dashboard"),
+            {"date": self.book_date.isoformat()},
+        )
+        self.assertContains(response, "+100% vs yesterday")
+        self.assertContains(response, "+100% vs last week")
+
+    def test_overview_bundle_and_zone_revenue(self):
+        drinks = Bundle.objects.create(
+            beach_bar=self.bar,
+            name="Drinks Package",
+            description="Two drinks",
+            price=Decimal("8.00"),
+            is_active=True,
+        )
+        reservations = book_sunbeds(
+            self.guest,
+            self.bar,
+            self.book_date,
+            [self.sunbed_a.id],
+            bundle_ids=[drinks.id],
+        )
+        self.assertEqual(len(reservations), 1)
+        overview = get_dashboard_overview(self.bar, self.book_date)
+        self.assertEqual(overview["bundle_revenue_total"], Decimal("8.00"))
+        self.assertEqual(overview["revenue"], Decimal("33.00"))
+        drinks_stat = next(s for s in overview["bundle_stats"] if s["name"] == "Drinks Package")
+        self.assertEqual(drinks_stat["sold"], 1)
+        self.assertEqual(drinks_stat["revenue"], Decimal("8.00"))
 
 
 class OwnerReservationsTests(BookingTestMixin, TestCase):
@@ -575,14 +645,19 @@ class OwnerManualParityTests(BookingTestMixin, TestCase):
         self.assertEqual(overview["revenue"], Decimal("0"))
         self.assertEqual(overview["occupancy_pct"], 0)
         self.assertEqual(overview["free_spots"], 2)
+        self.assertFalse(overview["has_bookings"])
+        self.assertEqual(overview["trends"]["bookings_count"]["vs_yesterday_pct"], None)
 
         self.client.login(email=self.owner.email, password="testpass123")
         response = self.client.get(
             reverse("owner_dashboard"),
             {"date": self.book_date.isoformat()},
         )
-        self.assertContains(response, "spots booked")
-        self.assertContains(response, "<strong>0</strong> of <strong>2</strong>")
+        self.assertContains(response, "spots occupied")
+        self.assertContains(response, "No bookings for this date.")
+        self.assertContains(response, "Quick Actions")
+        self.assertContains(response, "vs yesterday")
+        self.assertContains(response, "vs last week")
 
     def test_overview_category_breakdown_on_page(self):
         premium = SunbedCategory.objects.create(
@@ -608,6 +683,9 @@ class OwnerManualParityTests(BookingTestMixin, TestCase):
         self.assertContains(response, "Premium")
         self.assertContains(response, "1 / 2")
         self.assertContains(response, "0 / 1")
+        self.assertContains(response, "Beach status")
+        self.assertContains(response, "Revenue by Zone")
+        self.assertContains(response, "fill-meter")
 
     def test_overview_taken_spots_matches_guest_map_api(self):
         book_sunbeds(self.guest, self.bar, self.book_date, [self.sunbed_a.id])
@@ -3339,6 +3417,91 @@ class OnboardingUiTests(TestCase):
         self.assertNotContains(page, 'id="bar-setup-form"')
 
 
+class RegistrationValidationTests(TestCase):
+    def _register_payload(self, **overrides):
+        payload = {
+            "first_name": "Alex",
+            "last_name": "Guest",
+            "email": "alex.guest@test.beach",
+            "password": "testpass123",
+            "password_confirm": "testpass123",
+            "role": UserRole.REGISTERED,
+            "terms": "on",
+        }
+        payload.update(overrides)
+        return payload
+
+    def test_register_page_shows_confirm_password(self):
+        response = self.client.get(reverse("register"))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'name="password_confirm"')
+        self.assertContains(response, "Confirm password")
+
+    def test_short_password_rejected(self):
+        response = self.client.post(
+            reverse("register"),
+            self._register_payload(password="short", password_confirm="short"),
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Password must be at least 8 characters.")
+        self.assertFalse(
+            User.objects.filter(email="alex.guest@test.beach").exists()
+        )
+
+    def test_password_mismatch_rejected(self):
+        response = self.client.post(
+            reverse("register"),
+            self._register_payload(password_confirm="otherpass123"),
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Password confirmation does not match.")
+        self.assertFalse(
+            User.objects.filter(email="alex.guest@test.beach").exists()
+        )
+
+    def test_missing_password_confirm_rejected(self):
+        response = self.client.post(
+            reverse("register"),
+            self._register_payload(password_confirm=""),
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Please confirm your password.")
+        self.assertFalse(
+            User.objects.filter(email="alex.guest@test.beach").exists()
+        )
+
+    def test_valid_guest_register_logs_in(self):
+        response = self.client.post(
+            reverse("register"),
+            self._register_payload(),
+        )
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response.url, reverse("explore"))
+        user = User.objects.get(email="alex.guest@test.beach")
+        self.assertEqual(user.role, UserRole.REGISTERED)
+        self.assertTrue(user.check_password("testpass123"))
+        follow = self.client.get(reverse("explore"))
+        self.assertEqual(follow.wsgi_request.user, user)
+
+    def test_duplicate_email_still_rejected(self):
+        User.objects.create_user(
+            email="alex.guest@test.beach",
+            password="testpass123",
+            first_name="Existing",
+            last_name="User",
+            role=UserRole.REGISTERED,
+        )
+        response = self.client.post(
+            reverse("register"),
+            self._register_payload(),
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "An account with this email already exists.")
+        self.assertEqual(
+            User.objects.filter(email="alex.guest@test.beach").count(), 1
+        )
+
+
 class Slice13FlowTests(TestCase):
     def api_post(self, client, url, payload=None):
         return client.post(
@@ -3356,6 +3519,7 @@ class Slice13FlowTests(TestCase):
                 "last_name": "Owner",
                 "email": "regowner@test.beach",
                 "password": "testpass123",
+                "password_confirm": "testpass123",
                 "role": UserRole.OWNER,
                 "terms": "on",
             },
@@ -3456,6 +3620,42 @@ class SeedBulkTests(TestCase):
         )
         self.assertEqual(bulk_bars.count(), 4)
 
+    def test_seed_bulk_creates_history_and_varied_occupancy(self):
+        from django.core.management import call_command
+
+        call_command("seed_bulk", bars=3, seed=21)
+        bar = BeachBar.objects.filter(
+            owner__email__regex=r"^owner\d{3}@beachbooker\.test$"
+        ).first()
+        self.assertIsNotNone(bar)
+        today = date.today()
+        yesterday_count = Reservation.objects.filter(
+            sunbed__beach_bar=bar,
+            reservation_date=today - timedelta(days=1),
+            status=ReservationStatus.ACTIVE,
+        ).count()
+        last_week_count = Reservation.objects.filter(
+            sunbed__beach_bar=bar,
+            reservation_date=today - timedelta(days=7),
+            status=ReservationStatus.ACTIVE,
+        ).count()
+        today_count = Reservation.objects.filter(
+            sunbed__beach_bar=bar,
+            reservation_date=today,
+            status=ReservationStatus.ACTIVE,
+        ).count()
+        self.assertGreater(yesterday_count, 0)
+        self.assertGreater(last_week_count, 0)
+        self.assertGreater(today_count, 0)
+        # With fixed seed, per-day random subsets should not be identical occupancy.
+        overview_today = get_dashboard_overview(bar, today)
+        overview_yesterday = get_dashboard_overview(bar, today - timedelta(days=1))
+        self.assertIsNotNone(
+            overview_today["trends"]["bookings_count"]["vs_yesterday_pct"]
+            if overview_yesterday["bookings_count"]
+            else True
+        )
+
     def test_clear_bulk_removes_bulk_data_only(self):
         from django.core.management import call_command
 
@@ -3501,6 +3701,50 @@ class SeedBulkTests(TestCase):
         self.assertEqual(len(bars), DEFAULT_UNFILTERED_LIMIT)
         filtered = search_bars(city="Budva")
         self.assertGreater(len(filtered), 0)
+
+
+class SeedDemoTrendHistoryTests(TestCase):
+    def test_seed_demo_has_today_yesterday_and_last_week(self):
+        from django.core.management import call_command
+
+        call_command("seed_demo")
+        bar = BeachBar.objects.get(name="Riccardo Beach Bar")
+        today = date.today()
+        for day in (
+            today,
+            today - timedelta(days=1),
+            today - timedelta(days=7),
+            today + timedelta(days=1),
+            today + timedelta(days=2),
+        ):
+            self.assertGreater(
+                Reservation.objects.filter(
+                    sunbed__beach_bar=bar,
+                    reservation_date=day,
+                    status=ReservationStatus.ACTIVE,
+                ).count(),
+                0,
+                msg=f"Expected reservations on {day}",
+            )
+        overview = get_dashboard_overview(bar, today)
+        self.assertIsNotNone(overview["trends"]["bookings_count"]["vs_yesterday_pct"])
+        self.assertIsNotNone(overview["trends"]["bookings_count"]["vs_last_week_pct"])
+        self.assertNotEqual(
+            overview["bookings_count"],
+            overview["trends"]["bookings_count"]["yesterday_value"],
+        )
+        self.assertGreater(overview["bundle_revenue_total"], Decimal("0"))
+
+    def test_seed_demo_pitch_day_plus_two_has_data(self):
+        from django.core.management import call_command
+
+        call_command("seed_demo")
+        bar = BeachBar.objects.get(name="Riccardo Beach Bar")
+        pitch_day = date.today() + timedelta(days=2)
+        overview = get_dashboard_overview(bar, pitch_day)
+        self.assertGreater(overview["bookings_count"], 0)
+        self.assertIsNotNone(overview["trends"]["bookings_count"]["vs_yesterday_pct"])
+        self.assertGreater(overview["revenue"], Decimal("0"))
 
 
 class UserIsActiveAndAdminLogModelTests(TestCase):

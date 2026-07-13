@@ -5,7 +5,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>{% block title %}BeachBooker{% endblock %}</title>
-  <link rel="stylesheet" href="{% static 'core/css/styles.css' %}">
+  <link rel="stylesheet" href="{% static 'core/css/styles.css' %}?v={{ APP_ASSET_VERSION }}">
   {% block extra_head %}{% endblock %}
 </head>
 <body>
