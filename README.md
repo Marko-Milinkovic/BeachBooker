@@ -16,96 +16,112 @@ Stack: **Django**, **MySQL**, **AJAX** for dynamic UI (map, booking).
 
 ## Local setup (Django)
 
-### First-time clone
+**Prerequisites (must exist on the machine before Cursor/agents can finish setup):**
+- Git, Python 3.11+ (3.13 is fine)
+- MySQL Server running locally (Workbench optional but handy)
+- Your MySQL root (or other) password and port — fill these into `.env`; nobody else knows them
+
+### First-time clone (line by line)
+
+1. **Clone the repo**
+   ```bash
+   git clone https://github.com/Marko-Milinkovic/BeachBooker.git
+   cd BeachBooker
+   ```
+
+2. **Create and activate a virtual environment**
+   ```bash
+   python -m venv venv
+   ```
+   - Windows (PowerShell / cmd): `venv\Scripts\activate`
+   - Windows (MSYS/Git Bash): `source venv/Scripts/activate` or use `venv\Scripts\python.exe` directly
+   - macOS / Linux: `source venv/bin/activate`
+
+3. **Install dependencies**
+   ```bash
+   python -m pip install -r requirements.txt
+   ```
+   (Use the venv’s `python` after activate. On this team’s Windows machines, `py manage.py …` only works if that interpreter also has Django installed.)
+
+4. **Create `.env` from the example**
+   ```bash
+   # Windows
+   copy .env.example .env
+   # macOS / Linux
+   # cp .env.example .env
+   ```
+   Edit `.env` and set at least:
+   - `DB_PASSWORD=` *(your local MySQL password)*
+   - `DB_PORT=` *(e.g. `3308` or `3306`)*
+   - `DB_NAME=beachbooker`
+   - `DB_USER=root` *(or your MySQL user)*
+   - `DB_HOST=127.0.0.1`
+   - Optionally change `SECRET_KEY`
+
+5. **MySQL — create database and tables**
+   1. Start MySQL.
+   2. Create database `beachbooker` if it does not exist  
+      (Workbench: create schema, or CLI: `CREATE DATABASE beachbooker CHARACTER SET utf8mb4;`).
+   3. Import **`database/schema.sql`** (Workbench: File → Run SQL Script).  
+      Current `schema.sql` already includes `user.is_active`, `user.last_login`, `beach_bar.image_url`, and `admin_action_log`.
+
+6. **Apply Django migrations**
+   ```bash
+   python manage.py migrate --fake-initial
+   python manage.py migrate
+   ```
+   - `--fake-initial` marks `core.0001_initial` as applied **without** recreating tables already created by `schema.sql`.
+   - The following `migrate` applies any newer migrations if your DB predates them.
+
+   If you use an **empty** database and skip `schema.sql`:
+   ```bash
+   python manage.py migrate
+   ```
+
+7. **Seed demo + bulk data (recommended for a full Explore demo)**
+   ```bash
+   python manage.py seed_demo
+   python manage.py seed_bulk --bars 100
+   ```
+   Optional: `python manage.py seed_bulk --refresh-images` re-assigns local bar photos from `core/static/core/images/bars/`.
+
+8. **Run the server**
+   ```bash
+   python manage.py runserver
+   ```
+   Open `http://127.0.0.1:8000/`.
+
+### Can a teammate paste this README into Cursor and get a working app?
+
+**Mostly yes**, if they (or Cursor) follow steps 1–8 in order. Cursor can create the venv, install deps, copy `.env.example`, run migrate/seed/runserver.
+
+**They / Cursor still need human input for:**
+- MySQL already installed and running
+- Real `DB_PASSWORD` / `DB_PORT` in `.env` (not committed; only `.env.example` is in the repo)
+
+Without MySQL credentials, setup stops at step 4–5. With a correct `.env` + `schema.sql` imported, the rest is automated.
+
+### Bar images (works on every teammate’s machine)
+
+- **116 beach photos are committed** under `core/static/core/images/bars/` — they come with `git clone`; nobody needs to re-download them.
+- Each bulk bar stores a **site-relative** URL such as `/static/core/images/bars/pexels-….jpg` in `beach_bar.image_url`.
+- Django serves those files from the repo via `STATICFILES_DIRS` (`core/static/`). Paths are not absolute (`D:\…`) and not machine-specific, so cards load the same after clone + `seed_bulk` (or `--refresh-images`).
+- Demo bars (Riccardo Beach Bar, Porto Skver Beach) still use external Unsplash URLs from `seed_demo`.
 
 ```bash
-git clone https://github.com/Marko-Milinkovic/BeachBooker.git
-cd BeachBooker
-
-python -m venv venv
-# Windows (MSYS): venv\bin\python   |   standard Windows: venv\Scripts\python
-venv\bin\python -m pip install -r requirements.txt
-
-copy .env.example .env
-# Edit .env — set DB_PASSWORD, DB_PORT (e.g. 3308), DB_NAME=beachbooker
-```
-
-**MySQL — create database and tables**
-
-1. In MySQL Workbench, create database `beachbooker` (if it does not exist).
-2. Import **`database/schema.sql`** (File → Run SQL Script).
-
-**Django migrations**
-
-We keep the canonical schema in `database/schema.sql`. Django models mirror those tables; the first `core` migration must not try to recreate them.
-
-After `schema.sql` is imported:
-
-```bash
-venv\bin\python manage.py migrate --fake-initial
-venv\bin\python manage.py migrate
-```
-
-- `--fake-initial` marks `core.0001_initial` as applied **without** recreating tables from `schema.sql`.
-- A normal `migrate` afterwards applies any later migrations (e.g. `core.0002` adds `user.last_login` if your DB was created from an older `schema.sql`).
-
-**`user.last_login` column:** Django’s `core.User` needs a nullable `last_login` field. The current `database/schema.sql` includes it. If you imported an **older** SQL file without that column, `python manage.py migrate` adds it automatically — you do **not** need to re-import `schema.sql`.
-
-If you skip `schema.sql` and use an empty database instead, run:
-
-```bash
-venv\bin\python manage.py migrate
-```
-
-(Only if you want Django to create all tables from migrations — the team default is **`schema.sql` + `--fake-initial`**.)
-
-**Run the app**
-
-```bash
-venv\bin\python manage.py runserver
-```
-
-Open `http://127.0.0.1:8000/`.
-
-**Demo data (optional)**
-
-```bash
-venv\bin\python manage.py seed_demo
-```
-
-Creates sample users (`owner@beachbooker.test`, `guest@beachbooker.test`, `admin@beachbooker.test` / password `demo1234`), two beach bars, sunbeds, and sample reservations. Safe to run more than once.
-
-**Bulk explore data (optional)**
-
-```bash
-python manage.py seed_bulk --bars 100
-```
-
-Adds 100 Adriatic beach bars with unique images, varied pricing, reviews, and partial occupancy. Idempotent: re-run tops up missing bulk bars only. Demo bars and accounts from `seed_demo` are untouched.
-
-**Bar images (local static files)**
-
-Place curated photos in `core/static/core/images/bars/` (120+ JPG/PNG files), then:
-
-```bash
-python manage.py seed_bulk --refresh-images
-```
-
-Assigns one unique local image per bulk bar. Demo bars keep their dedicated URLs from `seed_demo`.
-
-```bash
-python manage.py seed_bulk --clear-bulk   # remove bulk bars/owners only
+python manage.py seed_bulk --refresh-images   # re-assign local photos to bulk bars
+python manage.py seed_bulk --clear-bulk       # remove bulk bars/owners only
 ```
 
 Bulk owner accounts: `owner001@beachbooker.test` … `owner100@beachbooker.test` / `demo1234`. Reviewer pool: `guest001@…` … `guest020@…`.
 
-**Demo login**
+### Demo login
 
 - Guest: `guest@beachbooker.test` / `demo1234` — browse, book spots, view/cancel on My Bookings
 - Owner: `owner@beachbooker.test` / `demo1234` — owner dashboard (overview, reservations, cancel guest bookings)
 - Admin: `admin@beachbooker.test` / `demo1234` — BeachBooker Admin at `/admin-panel/` (users + activity log); Django `/admin/` remains as backup
 
-**Owner onboarding**
+### Owner onboarding
 
 1. Register with role **Beach bar owner** (or log in as an owner with no bar).
 2. You are taken to **Create your beach bar** — name, address, city, hours, optional description/Maps link/amenities.
