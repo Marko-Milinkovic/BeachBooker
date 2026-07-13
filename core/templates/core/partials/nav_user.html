@@ -7,6 +7,9 @@
     {% if user.role == 'owner' %}
     <a href="{% url 'owner_dashboard' %}"{% if active_nav == 'owner' %} class="active"{% endif %}>For Owners</a>
     {% endif %}
+    {% if user.role == 'admin' %}
+    <a href="{% url 'admin_panel' %}"{% if active_nav == 'admin' %} class="active"{% endif %}>Admin</a>
+    {% endif %}
   </div>
   <div class="nav__right">
     <span style="font-size:.875rem;color:var(--text-2);margin-right:8px">{{ user.first_name }}</span>

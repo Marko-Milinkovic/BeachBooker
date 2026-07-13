@@ -27,6 +27,8 @@ def _post_auth_redirect(request, user):
         require_https=request.is_secure(),
     ):
         return candidate
+    if user.role == UserRole.ADMIN:
+        return reverse("admin_panel")
     if user.role == UserRole.OWNER:
         return reverse("owner_dashboard")
     return reverse("explore")
@@ -44,6 +46,7 @@ def login_page(request):
         if user is not None:
             login(request, user)
             return redirect(_post_auth_redirect(request, user))
+        # Avoid revealing whether email exists; also covers inactive accounts.
         error = "Invalid email or password."
 
     return render(

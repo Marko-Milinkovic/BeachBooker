@@ -103,6 +103,7 @@ Bulk owner accounts: `owner001@beachbooker.test` … `owner100@beachbooker.test`
 
 - Guest: `guest@beachbooker.test` / `demo1234` — browse, book spots, view/cancel on My Bookings
 - Owner: `owner@beachbooker.test` / `demo1234` — owner dashboard (overview, reservations, cancel guest bookings)
+- Admin: `admin@beachbooker.test` / `demo1234` — BeachBooker Admin at `/admin-panel/` (users + activity log); Django `/admin/` remains as backup
 
 **Owner onboarding**
 
@@ -110,7 +111,6 @@ Bulk owner accounts: `owner001@beachbooker.test` … `owner100@beachbooker.test`
 2. You are taken to **Create your beach bar** — name, address, city, hours, optional description/Maps link/amenities.
 3. On create, Standard (€15) and Premium (€25) categories are seeded; no sunbeds yet (use Layout).
 4. You land on **Settings**; Categories & pricing, Layout, Bundles, and Reservations are available immediately.
-- Admin: `admin@beachbooker.test` / `demo1234` — Django admin at `/admin/`
 
 Auth uses Django sessions (cookie-based). Register at `/register/` or log in at `/login/`.
 

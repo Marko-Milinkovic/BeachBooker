@@ -44,6 +44,15 @@ from core.services.onboarding import (
     create_owner_bar,
     get_setup_form_payload,
 )
+from core.services.admin_panel import (
+    AdminError,
+    create_user,
+    delete_user,
+    get_overview,
+    list_logs,
+    list_users,
+    update_user,
+)
 from core.services.owner import get_owner_bar
 from core.services.pricing import PricingError, update_category_prices
 from core.services.reservations import (
@@ -543,3 +552,131 @@ def owner_setup(request):
             "redirect_url": "/owner/?tab=settings",
         }
     )
+
+
+def admin_required_json(view_func):
+    @login_required_json
+    @wraps(view_func)
+    def wrapper(request, *args, **kwargs):
+        if request.user.role != UserRole.ADMIN or not request.user.is_active:
+            return JsonResponse(
+                {"error": "Admin access required.", "code": "forbidden"},
+                status=403,
+            )
+        return view_func(request, *args, **kwargs)
+
+    return wrapper
+
+
+def _admin_error_response(exc):
+    status = 403 if exc.code in ("forbidden",) else 404 if exc.code == "not_found" else 400
+    return JsonResponse({"error": exc.message, "code": exc.code}, status=status)
+
+
+@admin_required_json
+def admin_overview(request):
+    if request.method != "GET":
+        return JsonResponse(
+            {"error": "Method not allowed.", "code": "method_not_allowed"},
+            status=405,
+        )
+    try:
+        return JsonResponse(get_overview(request.user))
+    except AdminError as exc:
+        return _admin_error_response(exc)
+
+
+@admin_required_json
+def admin_users(request):
+    if request.method == "GET":
+        try:
+            users = list_users(
+                request.user,
+                q=request.GET.get("q", ""),
+                role=request.GET.get("role", ""),
+                status=request.GET.get("status", ""),
+            )
+        except AdminError as exc:
+            return _admin_error_response(exc)
+        return JsonResponse({"count": len(users), "users": users})
+
+    if request.method == "POST":
+        payload = _parse_json_body(request)
+        if payload is None:
+            return JsonResponse(
+                {"error": "Invalid JSON body.", "code": "invalid_json"},
+                status=400,
+            )
+        try:
+            user = create_user(
+                request.user,
+                first_name=payload.get("first_name"),
+                last_name=payload.get("last_name"),
+                email=payload.get("email"),
+                password=payload.get("password"),
+                role=payload.get("role"),
+            )
+        except AdminError as exc:
+            return _admin_error_response(exc)
+        return JsonResponse({"ok": True, "user": user}, status=201)
+
+    return JsonResponse(
+        {"error": "Method not allowed.", "code": "method_not_allowed"},
+        status=405,
+    )
+
+
+@admin_required_json
+def admin_user_detail(request, user_id):
+    if request.method == "PATCH":
+        payload = _parse_json_body(request)
+        if payload is None:
+            return JsonResponse(
+                {"error": "Invalid JSON body.", "code": "invalid_json"},
+                status=400,
+            )
+        try:
+            user = update_user(
+                request.user,
+                user_id,
+                first_name=payload.get("first_name"),
+                last_name=payload.get("last_name"),
+                email=payload.get("email"),
+                role=payload.get("role"),
+                password=payload.get("password"),
+                is_active=payload.get("is_active"),
+            )
+        except AdminError as exc:
+            return _admin_error_response(exc)
+        return JsonResponse({"ok": True, "user": user})
+
+    if request.method == "DELETE":
+        try:
+            result = delete_user(request.user, user_id)
+        except AdminError as exc:
+            return _admin_error_response(exc)
+        return JsonResponse({"ok": True, **result})
+
+    return JsonResponse(
+        {"error": "Method not allowed.", "code": "method_not_allowed"},
+        status=405,
+    )
+
+
+@admin_required_json
+def admin_logs(request):
+    if request.method != "GET":
+        return JsonResponse(
+            {"error": "Method not allowed.", "code": "method_not_allowed"},
+            status=405,
+        )
+    try:
+        logs = list_logs(
+            request.user,
+            action=request.GET.get("action", ""),
+            date_from=request.GET.get("from", ""),
+            date_to=request.GET.get("to", ""),
+        )
+    except AdminError as exc:
+        return _admin_error_response(exc)
+    return JsonResponse({"count": len(logs), "logs": logs})

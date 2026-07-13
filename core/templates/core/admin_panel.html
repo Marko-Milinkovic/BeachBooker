@@ -1,0 +1,205 @@
+{% extends "core/base.html" %}
+{% load static %}
+
+{% block title %}Admin — BeachBooker{% endblock %}
+
+{% block extra_head %}
+<link rel="stylesheet" href="{% static 'core/css/dashboard.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="dash"
+     id="admin-app"
+     data-users-url="{% url 'api_admin_users' %}"
+     data-logs-url="{% url 'api_admin_logs' %}"
+     data-overview-url="{% url 'api_admin_overview' %}">
+  <aside class="side">
+    <div class="side__label">Admin</div>
+    <a href="?tab=overview" class="side__link{% if active_tab == 'overview' %} on{% endif %}">Overview</a>
+    <a href="?tab=users" class="side__link{% if active_tab == 'users' %} on{% endif %}">Users</a>
+    <a href="?tab=activity" class="side__link{% if active_tab == 'activity' %} on{% endif %}">Activity</a>
+  </aside>
+  <main class="dash__main">
+    <section id="tab-overview" class="dash-panel"{% if active_tab != 'overview' %} style="display:none"{% endif %}>
+      <div class="dash__head">
+        <h1 class="dash__title">System overview</h1>
+      </div>
+      <div class="stats">
+        <div class="stat">
+          <div class="stat__label">Status</div>
+          <div class="stat__value">{{ overview.system_status|upper }}</div>
+        </div>
+        <div class="stat">
+          <div class="stat__label">Users</div>
+          <div class="stat__value">{{ overview.users_total }}</div>
+        </div>
+        <div class="stat">
+          <div class="stat__label">Active</div>
+          <div class="stat__value">{{ overview.users_active }}</div>
+        </div>
+        <div class="stat">
+          <div class="stat__label">Blocked</div>
+          <div class="stat__value">{{ overview.users_blocked }}</div>
+        </div>
+        <div class="stat">
+          <div class="stat__label">Beach bars</div>
+          <div class="stat__value">{{ overview.beach_bars }}</div>
+        </div>
+        <div class="stat">
+          <div class="stat__label">Bookings today</div>
+          <div class="stat__value">{{ overview.reservations_today }}</div>
+        </div>
+      </div>
+      <div class="card">
+        <h2 class="card__title">Role breakdown</h2>
+        <p class="dash-status-line">
+          Registered <strong>{{ overview.users_registered }}</strong> ·
+          Owners <strong>{{ overview.users_owners }}</strong> ·
+          Admins <strong>{{ overview.users_admins }}</strong>
+        </p>
+      </div>
+    </section>
+
+    <section id="tab-users" class="dash-panel"{% if active_tab != 'users' %} style="display:none"{% endif %}>
+      <div class="dash__head dash__head--split">
+        <h1 class="dash__title">User accounts</h1>
+        <button type="button" class="btn btn--teal btn--sm btn--pill" id="admin-add-user">Add user</button>
+      </div>
+
+      <form method="get" class="toolbar" id="admin-user-filters">
+        <input type="hidden" name="tab" value="users">
+        <input type="search" name="q" class="input" placeholder="Search name or email" value="{{ q }}" aria-label="Search users">
+        <select name="role" class="input input--select" aria-label="Role filter">
+          <option value="">All roles</option>
+          {% for role in roles %}
+          <option value="{{ role }}"{% if role_filter == role %} selected{% endif %}>{{ role|title }}</option>
+          {% endfor %}
+        </select>
+        <select name="status" class="input input--select" aria-label="Status filter">
+          <option value=""{% if not status_filter %} selected{% endif %}>All statuses</option>
+          <option value="active"{% if status_filter == 'active' %} selected{% endif %}>Active</option>
+          <option value="blocked"{% if status_filter == 'blocked' %} selected{% endif %}>Blocked</option>
+        </select>
+        <button type="submit" class="btn btn--outline btn--sm btn--pill">Filter</button>
+      </form>
+
+      <p id="admin-users-msg" class="dash-status-line" style="display:none"></p>
+
+      <div class="tbl-wrap">
+        <table class="tbl" id="admin-users-table">
+          <thead>
+            <tr>
+              <th>Name</th>
+              <th>Email</th>
+              <th>Role</th>
+              <th>Status</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for u in users %}
+            <tr data-user-id="{{ u.id }}">
+              <td>{{ u.first_name }} {{ u.last_name }}</td>
+              <td>{{ u.email }}</td>
+              <td>{{ u.role }}</td>
+              <td>{% if u.is_active %}Active{% else %}Blocked{% endif %}</td>
+              <td class="tbl__actions">
+                <button type="button" class="btn btn--ghost btn--sm admin-edit-user"
+                        data-id="{{ u.id }}"
+                        data-first-name="{{ u.first_name }}"
+                        data-last-name="{{ u.last_name }}"
+                        data-email="{{ u.email }}"
+                        data-role="{{ u.role }}"
+                        data-active="{{ u.is_active|yesno:'true,false' }}">Edit</button>
+                {% if u.is_active %}
+                <button type="button" class="btn btn--ghost btn--sm admin-block-user" data-id="{{ u.id }}">Block</button>
+                {% else %}
+                <button type="button" class="btn btn--ghost btn--sm admin-unblock-user" data-id="{{ u.id }}">Unblock</button>
+                {% endif %}
+                <button type="button" class="btn btn--ghost btn--sm admin-delete-user" data-id="{{ u.id }}" data-email="{{ u.email }}">Delete</button>
+              </td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="5">No users match these filters.</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section id="tab-activity" class="dash-panel"{% if active_tab != 'activity' %} style="display:none"{% endif %}>
+      <div class="dash__head">
+        <h1 class="dash__title">Activity log</h1>
+      </div>
+      <form method="get" class="toolbar">
+        <input type="hidden" name="tab" value="activity">
+        <select name="action" class="input input--select" aria-label="Action filter">
+          <option value="">All actions</option>
+          <option value="user.create"{% if action_filter == 'user.create' %} selected{% endif %}>user.create</option>
+          <option value="user.update"{% if action_filter == 'user.update' %} selected{% endif %}>user.update</option>
+          <option value="user.block"{% if action_filter == 'user.block' %} selected{% endif %}>user.block</option>
+          <option value="user.unblock"{% if action_filter == 'user.unblock' %} selected{% endif %}>user.unblock</option>
+          <option value="user.delete"{% if action_filter == 'user.delete' %} selected{% endif %}>user.delete</option>
+        </select>
+        <input type="date" name="from" class="input" value="{{ date_from }}" aria-label="From date">
+        <input type="date" name="to" class="input" value="{{ date_to }}" aria-label="To date">
+        <button type="submit" class="btn btn--outline btn--sm btn--pill">Filter</button>
+      </form>
+      <div class="tbl-wrap">
+        <table class="tbl">
+          <thead>
+            <tr>
+              <th>When</th>
+              <th>Admin</th>
+              <th>Action</th>
+              <th>Detail</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for entry in logs %}
+            <tr>
+              <td>{{ entry.created_at }}</td>
+              <td>{{ entry.admin_email }}</td>
+              <td>{{ entry.action }}</td>
+              <td>{{ entry.detail }}</td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="4">No admin actions logged yet.</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+</div>
+
+<dialog id="admin-user-dialog" class="admin-dialog">
+  <form method="dialog" id="admin-user-form" class="card" style="min-width:min(440px,90vw);padding:24px">
+    <h2 class="card__title" id="admin-user-dialog-title">Add user</h2>
+    <input type="hidden" id="admin-user-id" value="">
+    <label class="sr-only" for="admin-first-name">First name</label>
+    <input id="admin-first-name" class="input" placeholder="First name" required style="margin-bottom:8px;width:100%">
+    <label class="sr-only" for="admin-last-name">Last name</label>
+    <input id="admin-last-name" class="input" placeholder="Last name" required style="margin-bottom:8px;width:100%">
+    <label class="sr-only" for="admin-email">Email</label>
+    <input id="admin-email" type="email" class="input" placeholder="Email" required style="margin-bottom:8px;width:100%">
+    <label class="sr-only" for="admin-role">Role</label>
+    <select id="admin-role" class="input input--select" style="margin-bottom:8px;width:100%">
+      <option value="registered">Registered</option>
+      <option value="owner">Owner</option>
+      <option value="admin">Admin</option>
+    </select>
+    <label class="sr-only" for="admin-password">Password</label>
+    <input id="admin-password" type="password" class="input" placeholder="Password (min 8)" style="margin-bottom:12px;width:100%">
+    <p id="admin-form-error" style="color:var(--rose);font-size:.8125rem;display:none"></p>
+    <div style="display:flex;gap:8px;justify-content:flex-end">
+      <button type="button" class="btn btn--ghost btn--pill" id="admin-user-cancel">Cancel</button>
+      <button type="submit" class="btn btn--teal btn--pill" id="admin-user-save">Save</button>
+    </div>
+  </form>
+</dialog>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'core/js/admin_panel.js' %}?v={{ APP_JS_VERSION }}"></script>
+{% endblock %}

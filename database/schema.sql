@@ -5,6 +5,7 @@
 SET NAMES utf8mb4;
 SET FOREIGN_KEY_CHECKS = 0;
 
+DROP TABLE IF EXISTS admin_action_log;
 DROP TABLE IF EXISTS reservation_bundle;
 DROP TABLE IF EXISTS reservation;
 DROP TABLE IF EXISTS review;
@@ -29,6 +30,7 @@ CREATE TABLE user (
     first_name VARCHAR(80) NOT NULL,
     last_name VARCHAR(80) NOT NULL,
     role ENUM('registered', 'owner', 'admin') NOT NULL DEFAULT 'registered',
+    is_active TINYINT(1) NOT NULL DEFAULT 1,
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     PRIMARY KEY (id),
     UNIQUE KEY uk_user_email (email)
@@ -190,4 +192,24 @@ CREATE TABLE review (
         FOREIGN KEY (beach_bar_id) REFERENCES beach_bar (id)
         ON DELETE CASCADE ON UPDATE CASCADE,
     CONSTRAINT chk_review_rating CHECK (rating BETWEEN 1 AND 5)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ---------------------------------------------------------------------------
+-- admin_action_log — BeachBooker admin panel audit trail (SSU 5.4)
+-- ---------------------------------------------------------------------------
+CREATE TABLE admin_action_log (
+    id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+    admin_id BIGINT UNSIGNED NOT NULL,
+    action VARCHAR(64) NOT NULL,
+    target_type VARCHAR(40) NOT NULL DEFAULT '',
+    target_id BIGINT NULL,
+    detail VARCHAR(512) NOT NULL DEFAULT '',
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (id),
+    KEY idx_admin_action_log_admin (admin_id),
+    KEY idx_admin_action_log_action (action),
+    KEY idx_admin_action_log_created (created_at),
+    CONSTRAINT fk_admin_action_log_admin
+        FOREIGN KEY (admin_id) REFERENCES user (id)
+        ON DELETE RESTRICT ON UPDATE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

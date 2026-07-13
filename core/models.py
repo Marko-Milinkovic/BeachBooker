@@ -39,6 +39,7 @@ class User(AbstractBaseUser):
         choices=UserRole.choices,
         default=UserRole.REGISTERED,
     )
+    is_active = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
     objects = UserManager()
@@ -52,10 +53,6 @@ class User(AbstractBaseUser):
     @property
     def is_staff(self):
         return self.role == UserRole.ADMIN
-
-    @property
-    def is_active(self):
-        return True
 
     def __str__(self):
         return self.email
@@ -270,3 +267,27 @@ class Review(models.Model):
                 name="chk_review_rating",
             ),
         ]
+
+
+class AdminActionLog(models.Model):
+    """Audit trail for BeachBooker admin panel actions (SSU 5.4)."""
+
+    id = models.BigAutoField(primary_key=True)
+    admin = models.ForeignKey(
+        User,
+        on_delete=models.RESTRICT,
+        related_name="admin_actions",
+        db_column="admin_id",
+    )
+    action = models.CharField(max_length=64)
+    target_type = models.CharField(max_length=40, blank=True, default="")
+    target_id = models.BigIntegerField(null=True, blank=True)
+    detail = models.CharField(max_length=512, blank=True, default="")
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = "admin_action_log"
+        ordering = ("-created_at",)
+
+    def __str__(self):
+        return f"{self.action} by {self.admin_id} at {self.created_at}"

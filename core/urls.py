@@ -1,6 +1,6 @@
 from django.urls import path
 
-from core.views import api, auth, owner, pages
+from core.views import admin_panel, api, auth, owner, pages
 
 urlpatterns = [
     path("", pages.index, name="index"),
@@ -44,9 +44,14 @@ urlpatterns = [
     path("api/owner/layout/", api.owner_layout, name="api_owner_layout"),
     path("api/owner/settings/", api.owner_settings, name="api_owner_settings"),
     path("api/owner/setup/", api.owner_setup, name="api_owner_setup"),
+    path("api/admin/overview/", api.admin_overview, name="api_admin_overview"),
+    path("api/admin/users/", api.admin_users, name="api_admin_users"),
+    path("api/admin/users/<int:user_id>/", api.admin_user_detail, name="api_admin_user_detail"),
+    path("api/admin/logs/", api.admin_logs, name="api_admin_logs"),
     path("login/", auth.login_page, name="login"),
     path("register/", auth.register_page, name="register"),
     path("logout/", auth.logout_page, name="logout"),
     path("my-reservations/", pages.my_reservations, name="my_reservations"),
     path("owner/", owner.dashboard, name="owner_dashboard"),
+    path("admin-panel/", admin_panel.dashboard, name="admin_panel"),
 ]

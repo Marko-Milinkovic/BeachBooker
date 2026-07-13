@@ -6,6 +6,7 @@ from django.test import Client, TestCase
 from django.urls import reverse
 
 from core.models import (
+    AdminActionLog,
     Amenity,
     BeachBar,
     BeachBarAmenity,
@@ -3500,3 +3501,422 @@ class SeedBulkTests(TestCase):
         self.assertEqual(len(bars), DEFAULT_UNFILTERED_LIMIT)
         filtered = search_bars(city="Budva")
         self.assertGreater(len(filtered), 0)
+
+
+class UserIsActiveAndAdminLogModelTests(TestCase):
+    def test_new_user_is_active_by_default(self):
+        user = User.objects.create_user(
+            email="active.default@test.beach",
+            password="testpass123",
+            first_name="Active",
+            last_name="User",
+            role=UserRole.REGISTERED,
+        )
+        user.refresh_from_db()
+        self.assertTrue(user.is_active)
+
+    def test_inactive_user_cannot_authenticate(self):
+        user = User.objects.create_user(
+            email="blocked@test.beach",
+            password="testpass123",
+            first_name="Blocked",
+            last_name="User",
+            role=UserRole.REGISTERED,
+        )
+        user.is_active = False
+        user.save(update_fields=["is_active"])
+
+        from django.contrib.auth import authenticate
+
+        self.assertIsNone(
+            authenticate(email="blocked@test.beach", password="testpass123")
+        )
+
+    def test_inactive_user_login_page_rejected(self):
+        user = User.objects.create_user(
+            email="blocked.login@test.beach",
+            password="testpass123",
+            first_name="Blocked",
+            last_name="Login",
+            role=UserRole.REGISTERED,
+        )
+        user.is_active = False
+        user.save(update_fields=["is_active"])
+
+        client = Client()
+        response = client.post(
+            reverse("login"),
+            {"email": "blocked.login@test.beach", "password": "testpass123"},
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Invalid email or password.")
+        self.assertFalse(response.wsgi_request.user.is_authenticated)
+
+    def test_admin_action_log_can_be_created(self):
+        admin = User.objects.create_user(
+            email="admin.log@test.beach",
+            password="testpass123",
+            first_name="Admin",
+            last_name="Logger",
+            role=UserRole.ADMIN,
+        )
+        log = AdminActionLog.objects.create(
+            admin=admin,
+            action="user.create",
+            target_type="user",
+            target_id=admin.id,
+            detail="seed log",
+        )
+        self.assertEqual(AdminActionLog.objects.count(), 1)
+        self.assertEqual(log.admin_id, admin.id)
+        self.assertEqual(log.action, "user.create")
+
+
+class AdminPanelServiceTests(TestCase):
+    def setUp(self):
+        self.admin = User.objects.create_user(
+            email="panel.admin@test.beach",
+            password="testpass123",
+            first_name="Panel",
+            last_name="Admin",
+            role=UserRole.ADMIN,
+        )
+        self.guest = User.objects.create_user(
+            email="panel.guest@test.beach",
+            password="testpass123",
+            first_name="Panel",
+            last_name="Guest",
+            role=UserRole.REGISTERED,
+        )
+        self.owner = User.objects.create_user(
+            email="panel.owner@test.beach",
+            password="testpass123",
+            first_name="Panel",
+            last_name="Owner",
+            role=UserRole.OWNER,
+        )
+
+    def test_non_admin_forbidden(self):
+        from core.services.admin_panel import AdminError, list_users
+
+        with self.assertRaises(AdminError) as ctx:
+            list_users(self.guest)
+        self.assertEqual(ctx.exception.code, "forbidden")
+
+    def test_list_and_filter_users(self):
+        from core.services.admin_panel import list_users
+
+        all_users = list_users(self.admin)
+        self.assertGreaterEqual(len(all_users), 3)
+        owners = list_users(self.admin, role="owner")
+        self.assertEqual(len(owners), 1)
+        self.assertEqual(owners[0]["email"], "panel.owner@test.beach")
+        found = list_users(self.admin, q="panel.guest")
+        self.assertEqual(len(found), 1)
+
+    def test_create_user_and_duplicate_email(self):
+        from core.services.admin_panel import AdminError, create_user
+
+        created = create_user(
+            self.admin,
+            first_name="New",
+            last_name="Guest",
+            email="new.guest@test.beach",
+            password="securepass",
+            role=UserRole.REGISTERED,
+        )
+        self.assertEqual(created["email"], "new.guest@test.beach")
+        self.assertTrue(
+            AdminActionLog.objects.filter(action="user.create").exists()
+        )
+        with self.assertRaises(AdminError) as ctx:
+            create_user(
+                self.admin,
+                first_name="Dup",
+                last_name="Guest",
+                email="new.guest@test.beach",
+                password="securepass",
+                role=UserRole.REGISTERED,
+            )
+        self.assertEqual(ctx.exception.code, "user_exists")
+
+    def test_block_user_cannot_authenticate(self):
+        from django.contrib.auth import authenticate
+
+        from core.services.admin_panel import update_user
+
+        update_user(self.admin, self.guest.id, is_active=False)
+        self.guest.refresh_from_db()
+        self.assertFalse(self.guest.is_active)
+        self.assertIsNone(
+            authenticate(email="panel.guest@test.beach", password="testpass123")
+        )
+        self.assertTrue(
+            AdminActionLog.objects.filter(action="user.block").exists()
+        )
+
+    def test_cannot_delete_self_or_last_admin(self):
+        from core.services.admin_panel import AdminError, delete_user
+
+        with self.assertRaises(AdminError) as ctx:
+            delete_user(self.admin, self.admin.id)
+        self.assertEqual(ctx.exception.code, "last_admin")
+
+        other = User.objects.create_user(
+            email="second.admin@test.beach",
+            password="testpass123",
+            first_name="Second",
+            last_name="Admin",
+            role=UserRole.ADMIN,
+        )
+        with self.assertRaises(AdminError) as self_ctx:
+            delete_user(other, other.id)
+        self.assertEqual(self_ctx.exception.code, "forbidden")
+
+        delete_user(other, self.admin.id)
+        self.assertFalse(User.objects.filter(id=self.admin.id).exists())
+
+        with self.assertRaises(AdminError) as last_ctx:
+            delete_user(other, other.id)
+        self.assertEqual(last_ctx.exception.code, "last_admin")
+
+    def test_delete_guest_and_overview(self):
+        from core.services.admin_panel import delete_user, get_overview, list_logs
+
+        disposable = User.objects.create_user(
+            email="disposable@test.beach",
+            password="testpass123",
+            first_name="Dis",
+            last_name="Posable",
+            role=UserRole.REGISTERED,
+        )
+        result = delete_user(self.admin, disposable.id)
+        self.assertTrue(result["deleted"])
+        self.assertFalse(User.objects.filter(email="disposable@test.beach").exists())
+        overview = get_overview(self.admin)
+        self.assertEqual(overview["system_status"], "ok")
+        self.assertGreaterEqual(overview["users_total"], 2)
+        logs = list_logs(self.admin, action="user.delete")
+        self.assertGreaterEqual(len(logs), 1)
+
+
+class AdminPanelApiAndPageTests(TestCase):
+    def setUp(self):
+        self.admin = User.objects.create_user(
+            email="api.admin@test.beach",
+            password="testpass123",
+            first_name="Api",
+            last_name="Admin",
+            role=UserRole.ADMIN,
+        )
+        self.guest = User.objects.create_user(
+            email="api.guest@test.beach",
+            password="testpass123",
+            first_name="Api",
+            last_name="Guest",
+            role=UserRole.REGISTERED,
+        )
+        self.client = Client()
+
+    def test_guest_forbidden_on_page_and_api(self):
+        self.client.login(email="api.guest@test.beach", password="testpass123")
+        page = self.client.get(reverse("admin_panel"))
+        self.assertEqual(page.status_code, 302)
+        self.assertEqual(page.url, reverse("explore"))
+        api = self.client.get(reverse("api_admin_users"))
+        self.assertEqual(api.status_code, 403)
+
+    def test_admin_page_renders_tabs(self):
+        self.client.login(email="api.admin@test.beach", password="testpass123")
+        response = self.client.get(reverse("admin_panel") + "?tab=users")
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "User accounts")
+        self.assertContains(response, "api.guest@test.beach")
+        self.assertContains(response, "Admin")
+
+    def test_admin_login_redirects_to_panel(self):
+        response = self.client.post(
+            reverse("login"),
+            {"email": "api.admin@test.beach", "password": "testpass123"},
+        )
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response.url, reverse("admin_panel"))
+
+    def test_create_list_block_delete_via_api(self):
+        self.client.login(email="api.admin@test.beach", password="testpass123")
+        create = self.client.post(
+            reverse("api_admin_users"),
+            data=json.dumps(
+                {
+                    "first_name": "Made",
+                    "last_name": "User",
+                    "email": "made.user@test.beach",
+                    "password": "securepass",
+                    "role": "registered",
+                }
+            ),
+            content_type="application/json",
+        )
+        self.assertEqual(create.status_code, 201)
+        user_id = create.json()["user"]["id"]
+
+        listing = self.client.get(reverse("api_admin_users") + "?q=made.user")
+        self.assertEqual(listing.status_code, 200)
+        self.assertEqual(listing.json()["count"], 1)
+
+        blocked = self.client.generic(
+            "PATCH",
+            reverse("api_admin_user_detail", args=[user_id]),
+            data=json.dumps({"is_active": False}),
+            content_type="application/json",
+        )
+        self.assertEqual(blocked.status_code, 200)
+        self.assertFalse(blocked.json()["user"]["is_active"])
+
+        deleted = self.client.delete(reverse("api_admin_user_detail", args=[user_id]))
+        self.assertEqual(deleted.status_code, 200)
+        self.assertFalse(User.objects.filter(id=user_id).exists())
+
+        overview = self.client.get(reverse("api_admin_overview"))
+        self.assertEqual(overview.status_code, 200)
+        self.assertEqual(overview.json()["system_status"], "ok")
+
+class AdminOverviewCountTests(TestCase):
+    """Bulletproof overview math for multi-bar owners and blocked users."""
+
+    def setUp(self):
+        self.admin = User.objects.create_user(
+            email="overview.admin@test.beach",
+            password="testpass123",
+            first_name="Overview",
+            last_name="Admin",
+            role=UserRole.ADMIN,
+        )
+        self.owner = User.objects.create_user(
+            email="overview.owner@test.beach",
+            password="testpass123",
+            first_name="Overview",
+            last_name="Owner",
+            role=UserRole.OWNER,
+        )
+        self.owner_no_bar = User.objects.create_user(
+            email="overview.owner.empty@test.beach",
+            password="testpass123",
+            first_name="Empty",
+            last_name="Owner",
+            role=UserRole.OWNER,
+        )
+        self.guest = User.objects.create_user(
+            email="overview.guest@test.beach",
+            password="testpass123",
+            first_name="Overview",
+            last_name="Guest",
+            role=UserRole.REGISTERED,
+        )
+        BeachBar.objects.create(
+            owner=self.owner,
+            name="Overview Bar One",
+            address="1 Test",
+            city="Budva",
+            opening_time=time(8, 0),
+            closing_time=time(20, 0),
+        )
+        BeachBar.objects.create(
+            owner=self.owner,
+            name="Overview Bar Two",
+            address="2 Test",
+            city="Bar",
+            opening_time=time(8, 0),
+            closing_time=time(20, 0),
+        )
+        BeachBar.objects.create(
+            owner=self.owner,
+            name="Overview Bar Three",
+            address="3 Test",
+            city="Kotor",
+            opening_time=time(8, 0),
+            closing_time=time(20, 0),
+        )
+
+    def test_overview_owners_vs_bars_when_one_owner_has_many_bars(self):
+        from core.services.admin_panel import get_overview
+
+        overview = get_overview(self.admin)
+        self.assertEqual(overview["users_owners"], 2)
+        self.assertEqual(overview["beach_bars"], 3)
+        self.assertEqual(overview["users_registered"], 1)
+        self.assertEqual(overview["users_admins"], 1)
+        self.assertEqual(overview["users_total"], 4)
+        self.assertEqual(overview["users_active"], 4)
+        self.assertEqual(overview["users_blocked"], 0)
+        # One owner owns multiple bars → bar count can exceed owner count.
+        self.assertGreater(overview["beach_bars"], overview["users_owners"])
+
+    def test_overview_active_blocked_split(self):
+        from core.services.admin_panel import get_overview, update_user
+
+        update_user(self.admin, self.guest.id, is_active=False)
+        overview = get_overview(self.admin)
+        self.assertEqual(overview["users_blocked"], 1)
+        self.assertEqual(overview["users_active"], 3)
+        self.assertEqual(overview["users_total"], 4)
+
+    def test_api_overview_matches_service(self):
+        from core.services.admin_panel import get_overview
+
+        client = Client()
+        client.login(email="overview.admin@test.beach", password="testpass123")
+        expected = get_overview(self.admin)
+        response = client.get(reverse("api_admin_overview"))
+        self.assertEqual(response.status_code, 200)
+        payload = response.json()
+        for key in (
+            "users_total",
+            "users_active",
+            "users_blocked",
+            "users_owners",
+            "users_admins",
+            "users_registered",
+            "beach_bars",
+            "system_status",
+        ):
+            self.assertEqual(payload[key], expected[key])
+
+
+class AdminPanelUiIntegrationTests(TestCase):
+    def setUp(self):
+        self.admin = User.objects.create_user(
+            email="ui.admin@test.beach",
+            password="testpass123",
+            first_name="Ui",
+            last_name="Admin",
+            role=UserRole.ADMIN,
+        )
+        self.client = Client()
+        self.client.login(email="ui.admin@test.beach", password="testpass123")
+
+    def test_nav_contains_admin_link(self):
+        response = self.client.get(reverse("explore"))
+        self.assertContains(response, reverse("admin_panel"))
+        self.assertContains(response, "Admin")
+
+    def test_activity_tab_and_overview_content(self):
+        from core.services.admin_panel import create_user
+
+        create_user(
+            self.admin,
+            first_name="Logged",
+            last_name="Person",
+            email="logged.person@test.beach",
+            password="securepass",
+            role=UserRole.REGISTERED,
+        )
+        overview = self.client.get(reverse("admin_panel") + "?tab=overview")
+        self.assertContains(overview, "System overview")
+        self.assertContains(overview, "OK")
+        activity = self.client.get(
+            reverse("admin_panel") + "?tab=activity&action=user.create"
+        )
+        self.assertContains(activity, "Activity log")
+        self.assertContains(activity, "user.create")
+        self.assertContains(activity, "logged.person@test.beach")
