@@ -6,10 +6,10 @@ from core.models import BeachBar, Reservation, ReservationStatus, Sunbed
 from core.services.bundles import list_active_bundles
 
 BAR_IMAGES = {
-    "Blue Horizon Beach Club": (
+    "Riccardo Beach Bar": (
         "https://images.unsplash.com/photo-1519046904884-53103b34b206?w=1600&q=80"
     ),
-    "Aqua Paradise": (
+    "Porto Skver Beach": (
         "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=1600&q=80"
     ),
 }
@@ -35,7 +35,13 @@ def parse_filter_date(raw):
 
 
 def bar_image_url(bar):
-    return BAR_IMAGES.get(bar.name, DEFAULT_BAR_IMAGE)
+    stored = getattr(bar, "image_url", None)
+    if stored:
+        return stored
+    named = BAR_IMAGES.get(bar.name)
+    if named:
+        return named
+    return DEFAULT_BAR_IMAGE
 
 
 def date_quick_picks(anchor=None, count=5):

@@ -47,6 +47,7 @@ CREATE TABLE beach_bar (
     opening_time TIME NOT NULL,
     closing_time TIME NOT NULL,
     map_url VARCHAR(512) NULL,
+    image_url VARCHAR(512) NULL,
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     PRIMARY KEY (id),
     KEY idx_beach_bar_owner (owner_id),

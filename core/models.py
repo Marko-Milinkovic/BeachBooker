@@ -76,6 +76,7 @@ class BeachBar(models.Model):
     opening_time = models.TimeField()
     closing_time = models.TimeField()
     map_url = models.CharField(max_length=512, blank=True, null=True)
+    image_url = models.CharField(max_length=512, blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:

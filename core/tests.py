@@ -62,6 +62,8 @@ from core.services.explore import (
     search_bars,
     search_bars_payload,
     serialize_bar,
+    filters_active,
+    DEFAULT_UNFILTERED_LIMIT,
 )
 from core.services.layout import (
     LayoutError,
@@ -3404,3 +3406,97 @@ class Slice13FlowTests(TestCase):
         guest_page = self.client.get(reverse("beach_bar", args=[bar_id]))
         self.assertContains(guest_page, "Registered Beach")
         self.assertContains(guest_page, "From register flow")
+
+
+class BarImageUrlTests(TestCase):
+    def test_bar_image_url_prefers_stored_field(self):
+        from core.services.beach_bar import bar_image_url
+
+        owner = User.objects.create_user(
+            email="imgowner@test.beach",
+            password="testpass123",
+            first_name="Img",
+            last_name="Owner",
+            role=UserRole.OWNER,
+        )
+        custom_url = "https://images.example.com/custom-beach.jpg"
+        bar = BeachBar.objects.create(
+            owner=owner,
+            name="Custom Image Bar",
+            address="1 Shore",
+            city="Budva",
+            opening_time=time(8, 0),
+            closing_time=time(20, 0),
+            image_url=custom_url,
+        )
+        self.assertEqual(bar_image_url(bar), custom_url)
+
+
+class SeedBulkTests(TestCase):
+    def test_seed_bulk_creates_bars_with_unique_images(self):
+        from django.core.management import call_command
+
+        call_command("seed_bulk", bars=5, seed=7)
+        bulk_bars = BeachBar.objects.filter(
+            owner__email__regex=r"^owner\d{3}@beachbooker\.test$"
+        )
+        self.assertEqual(bulk_bars.count(), 5)
+        image_urls = set(bulk_bars.values_list("image_url", flat=True))
+        self.assertEqual(len(image_urls), 5)
+        self.assertTrue(all(url for url in image_urls))
+
+    def test_seed_bulk_is_idempotent(self):
+        from django.core.management import call_command
+
+        call_command("seed_bulk", bars=4, seed=11)
+        call_command("seed_bulk", bars=4, seed=11)
+        bulk_bars = BeachBar.objects.filter(
+            owner__email__regex=r"^owner\d{3}@beachbooker\.test$"
+        )
+        self.assertEqual(bulk_bars.count(), 4)
+
+    def test_clear_bulk_removes_bulk_data_only(self):
+        from django.core.management import call_command
+
+        call_command("seed_demo")
+        call_command("seed_bulk", bars=3, seed=3)
+        demo_count_before = BeachBar.objects.filter(
+            name__in=["Riccardo Beach Bar", "Porto Skver Beach"]
+        ).count()
+        self.assertEqual(demo_count_before, 2)
+
+        call_command("seed_bulk", clear_bulk=True)
+
+        self.assertEqual(
+            BeachBar.objects.filter(
+                owner__email__regex=r"^owner\d{3}@beachbooker\.test$"
+            ).count(),
+            0,
+        )
+        self.assertEqual(
+            BeachBar.objects.filter(
+                name__in=["Riccardo Beach Bar", "Porto Skver Beach"]
+            ).count(),
+            2,
+        )
+        self.assertTrue(
+            User.objects.filter(email="owner@beachbooker.test").exists()
+        )
+
+    def test_search_bars_returns_bulk_cities(self):
+        from django.core.management import call_command
+
+        call_command("seed_bulk", bars=10, seed=5)
+        payload = search_bars_payload(city="Budva")
+        self.assertGreaterEqual(payload["count"], 1)
+        for bar in payload["bars"]:
+            self.assertTrue(bar["image_url"])
+
+    def test_unfiltered_search_limits_to_eighteen(self):
+        from django.core.management import call_command
+
+        call_command("seed_bulk", bars=30, seed=9)
+        bars = search_bars()
+        self.assertEqual(len(bars), DEFAULT_UNFILTERED_LIMIT)
+        filtered = search_bars(city="Budva")
+        self.assertGreater(len(filtered), 0)

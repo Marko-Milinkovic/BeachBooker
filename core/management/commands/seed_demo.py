@@ -80,21 +80,27 @@ class Command(BaseCommand):
 
         blue = self._ensure_beach_bar(
             owner=owner,
-            name="Blue Horizon Beach Club",
+            name="Riccardo Beach Bar",
             address="Slovenska obala bb",
             city="Budva",
-            description="Flagship demo beach bar from the BeachBooker prototype.",
+            description="Flagship demo beach bar on Budva's Slovenska beach.",
             opening_time=time(8, 0),
             closing_time=time(20, 0),
+            image_url=(
+                "https://images.unsplash.com/photo-1519046904884-53103b34b206?w=1600&q=80"
+            ),
         )
         aqua = self._ensure_beach_bar(
             owner=owner,
-            name="Aqua Paradise",
+            name="Porto Skver Beach",
             address="Topolica 12",
             city="Bar",
-            description="Second demo bar with a smaller layout.",
+            description="Second demo bar on Bar's waterfront near Porto Skver.",
             opening_time=time(9, 0),
             closing_time=time(19, 0),
+            image_url=(
+                "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=1600&q=80"
+            ),
         )
 
         self._link_amenities(blue, amenities)
@@ -171,10 +177,19 @@ class Command(BaseCommand):
         return [Amenity.objects.get_or_create(name=name)[0] for name in names]
 
     def _ensure_beach_bar(self, **fields):
-        bar, _ = BeachBar.objects.get_or_create(
+        bar, created = BeachBar.objects.get_or_create(
             name=fields["name"],
             defaults=fields,
         )
+        if not created:
+            updates = {}
+            for key in ("image_url", "description", "address", "city"):
+                if key in fields and fields[key] and not getattr(bar, key, None):
+                    updates[key] = fields[key]
+            if updates:
+                for key, value in updates.items():
+                    setattr(bar, key, value)
+                bar.save(update_fields=list(updates.keys()))
         return bar
 
     def _link_amenities(self, bar, amenities):

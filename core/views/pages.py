@@ -11,6 +11,7 @@ from core.services.beach_bar import (
 from core.services.explore import (
     ExploreError,
     amenity_ids_from_querydict,
+    filters_active,
     list_amenities,
     parse_price_bound,
     parse_sort,
@@ -64,6 +65,9 @@ def explore(request):
             "filter_date": filter_date,
             "city": city,
             "bar_count": len(bars),
+            "show_unfiltered_hint": not filters_active(
+                city, amenity_ids, min_price, max_price
+            ),
             "today": date.today(),
             "amenities": amenities,
             "selected_amenities": selected_amenities,

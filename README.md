@@ -75,6 +75,30 @@ venv\bin\python manage.py seed_demo
 
 Creates sample users (`owner@beachbooker.test`, `guest@beachbooker.test`, `admin@beachbooker.test` / password `demo1234`), two beach bars, sunbeds, and sample reservations. Safe to run more than once.
 
+**Bulk explore data (optional)**
+
+```bash
+python manage.py seed_bulk --bars 100
+```
+
+Adds 100 Adriatic beach bars with unique images, varied pricing, reviews, and partial occupancy. Idempotent: re-run tops up missing bulk bars only. Demo bars and accounts from `seed_demo` are untouched.
+
+**Bar images (local static files)**
+
+Place curated photos in `core/static/core/images/bars/` (120+ JPG/PNG files), then:
+
+```bash
+python manage.py seed_bulk --refresh-images
+```
+
+Assigns one unique local image per bulk bar. Demo bars keep their dedicated URLs from `seed_demo`.
+
+```bash
+python manage.py seed_bulk --clear-bulk   # remove bulk bars/owners only
+```
+
+Bulk owner accounts: `owner001@beachbooker.test` … `owner100@beachbooker.test` / `demo1234`. Reviewer pool: `guest001@…` … `guest020@…`.
+
 **Demo login**
 
 - Guest: `guest@beachbooker.test` / `demo1234` — browse, book spots, view/cancel on My Bookings
@@ -118,7 +142,7 @@ Auth uses Django sessions (cookie-based). Register at `/register/` or log in at 
 
 **Layout editor manual check**
 
-1. Owner → **Layout** — grid loads with existing sunbeds (Blue Horizon after `seed_demo`).
+1. Owner → **Layout** — grid loads with existing sunbeds (Riccardo Beach Bar after `seed_demo`).
 2. Paint cells, **Save layout** — hard refresh (`Ctrl+Shift+R`) — layout persists.
 3. Guest beach bar map shows updated spots and labels.
 4. Book a spot → owner tries to erase that cell — blocked with an error message.

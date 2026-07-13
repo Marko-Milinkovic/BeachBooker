@@ -11,6 +11,7 @@ SORT_PRICE_ASC = "price_asc"
 SORT_PRICE_DESC = "price_desc"
 SORT_RATING_DESC = "rating_desc"
 VALID_SORTS = {SORT_NAME, SORT_PRICE_ASC, SORT_PRICE_DESC, SORT_RATING_DESC}
+DEFAULT_UNFILTERED_LIMIT = 18
 
 
 class ExploreError(Exception):
@@ -71,6 +72,10 @@ def parse_sort(raw):
     if sort not in VALID_SORTS:
         raise ExploreError("Invalid sort option.", "invalid_sort")
     return sort
+
+
+def filters_active(city="", amenity_ids=None, min_price=None, max_price=None):
+    return bool((city or "").strip()) or bool(amenity_ids) or min_price is not None or max_price is not None
 
 
 def _free_spots_for_bar(bar, filter_date):
@@ -150,6 +155,10 @@ def search_bars(
         bar.free_spots = _free_spots_for_bar(bar, filter_date)
         bar.image_url = bar_image_url(bar)
         result.append(bar)
+
+    if not filters_active(city, amenity_ids, min_price, max_price):
+        result = result[:DEFAULT_UNFILTERED_LIMIT]
+
     return result
 
 
