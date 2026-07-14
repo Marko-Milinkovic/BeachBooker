@@ -329,8 +329,11 @@
     colsInput.addEventListener("change", applyGridSize);
   }
 
-  loadLayout().catch((error) => {
-    console.error(error);
-    alert(error.message || "Could not load layout.");
-  });
+  // Only load when the Layout tab is the active panel (avoids surprise alerts on Overview).
+  if (panel.style.display !== "none") {
+    loadLayout().catch((error) => {
+      console.error(error);
+      alert(error.message || "Could not load layout.");
+    });
+  }
 })();

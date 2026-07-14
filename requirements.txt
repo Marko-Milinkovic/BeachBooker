@@ -21,6 +21,7 @@
 
 Django>=4.2,<6
 python-dotenv>=1.0,<2
+selenium>=4.15,<5
 
 # MySQL driver — mysqlclient on Linux/macOS; PyMySQL fallback on Windows
 mysqlclient>=2.2,<3; platform_system != "Windows"

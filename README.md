@@ -183,11 +183,89 @@ Auth uses Django sessions (cookie-based). Register at `/register/` or log in at 
 
 **Run tests**
 
+Django **unit / integration** tests (no browser):
+
 ```bash
-venv\bin\python manage.py test core
+python manage.py test core.tests
+```
+
+Selenium **WebDriver** UI tests (see section below):
+
+```bash
+python manage.py test core.tests_selenium
+```
+
+Run everything:
+
+```bash
+python manage.py test core
 ```
 
 **Do not commit `.env`** — only `.env.example` (placeholders).
+
+### Selenium WebDriver (UI tests)
+
+BeachBooker ships automated browser tests in `core/tests_selenium.py` (~20 cases: auth, explore, booking, owner dashboard, admin). Selenium IDE is not used.
+
+**Prerequisites (in addition to normal Django setup above)**
+
+1. **Google Chrome** installed (current stable is fine).
+2. Python package **`selenium`** — already listed in `requirements.txt`:
+   ```bash
+   python -m pip install -r requirements.txt
+   ```
+3. Same working **`.env` + MySQL** as for `manage.py test` / `runserver`.
+4. **No manual ChromeDriver download** — Selenium 4 resolves a matching driver automatically. You do **not** need to put `chromedriver.exe` on PATH or hardcode a path (unlike older coursework samples).
+
+**Cursor / any editor:** there is no Selenium plugin to install. Open the project, activate your venv in the integrated terminal, and run the commands below.
+
+**Run (headless by default — good for CI / Cursor)**
+
+```bash
+python manage.py test core.tests_selenium
+```
+
+**Watch the browser (headed mode)**
+
+```bash
+# Windows PowerShell
+$env:SELENIUM_HEADLESS="0"
+python manage.py test core.tests_selenium
+
+# Windows cmd
+set SELENIUM_HEADLESS=0
+python manage.py test core.tests_selenium
+
+# macOS / Linux
+SELENIUM_HEADLESS=0 python manage.py test core.tests_selenium
+```
+
+**Run one test**
+
+```bash
+python manage.py test core.tests_selenium.AuthSeleniumTests.test_01_login_success_guest_lands_on_explore
+```
+
+**What the suite covers**
+
+| Area | Examples |
+|------|----------|
+| Auth | Login OK / fail, register, password mismatch, logout |
+| Explore | List bars, city filter, price filter, clear, open bar detail |
+| Booking | Book sunbed, My Bookings, cancel, guest redirected to login |
+| Owner | Overview, date filter, reservations / pricing / bundles / settings |
+| Admin | Overview + Users tab |
+
+**Common failures**
+
+| Symptom | Fix |
+|---------|-----|
+| `WebDriverException` / cannot find Chrome | Install Google Chrome, then retry |
+| DB / connection errors | Fix `.env` (`DB_PASSWORD`, `DB_PORT`) and ensure MySQL is running |
+| Flaky timeout on book / explore | Re-run the single test headed (`SELENIUM_HEADLESS=0`) and watch the page |
+| Stale ChromeDriver after a big Chrome update | Upgrade Selenium: `python -m pip install -U "selenium>=4.15,<5"` |
+
+Tests spin up Django’s **LiveServer** themselves — you do **not** need `runserver` in another terminal.
 
 ### After `git pull` (already set up locally)
 

@@ -1,0 +1,20 @@
+[01:23, 7/14/2026] Marko Milinković: selenium webdriver
+[01:23, 7/14/2026] Marko Milinković: instaliras selenium
+[01:23, 7/14/2026] Marko Milinković: pip install selenium
+[01:23, 7/14/2026] Marko Milinković: i onda testiras nekako..
+[01:23, 7/14/2026] Marko Milinković: from selenium import webdriver
+from selenium.webdriver.common.by import By
+
+driver = webdriver.Chrome()
+
+driver.get("http://127.0.0.1:8000/login")
+
+driver.find_element(By.NAME, "username").send_keys("admin")
+driver.find_element(By.NAME, "password").send_keys("123456")
+
+driver.find_element(By.TAG_NAME, "button").click()
+
+assert "Početna" in driver.page_source
+
+driver.quit()
+[01:23, 7/14/2026] Marko Milinković: ovo je primer!!

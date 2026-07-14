@@ -9,6 +9,8 @@
   {% block extra_head %}{% endblock %}
 </head>
 <body>
+  {# Keeps csrftoken cookie available for fetch()/AJAX on every page #}
+  <div hidden>{% csrf_token %}</div>
   {% if user.is_authenticated %}
     {% include "core/partials/nav_user.html" %}
   {% else %}
